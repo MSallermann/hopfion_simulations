@@ -59,13 +59,13 @@ def main():
 
         plotting.plot_energy_path(energy_path, ax=plt.gca())
         plt.tight_layout()
-        plt.savefig( plot_folder + "/path_energy_before_gneb.png", dpi=300 )
+        plt.savefig(plot_folder + "/path_energy_before_gneb.png", dpi=300)
         plt.close()
 
         if args.dry_run:
             return
 
-        simulation.start(p_state, simulation.METHOD_GNEB, simulation.SOLVER_VP_OSO, n_iterations = 99000)
+        simulation.start(p_state, simulation.METHOD_GNEB, simulation.SOLVER_VP_OSO, n_iterations = 10000)
 
         energy_path = plotting.energy_path_from_p_state(p_state)
         plotting.plot_energy_path(energy_path, ax=plt.gca())
