@@ -4,10 +4,9 @@ import matplotlib.pyplot as plt
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-o',  dest="output_folder", type=str, nargs='?', default="output", help='The output folder')
-parser.add_argument('-t',  dest="output_tag", type=str, nargs='?', default="<time>", help='The output file tag')
+parser.add_argument('-t',  dest="output_tag", type=str, nargs='?', default="", help='The output file tag')
 parser.add_argument('-f',  dest="input_file", type=str, nargs='?', default="input.cfg", help='The input file')
 parser.add_argument('-ic', dest="initial_chain",   required=False, type=str, nargs='?', help='The initial chain')
-parser.add_argument('--dry', dest="dry_run", action="store_true")
 
 from spirit_python_utilities.spirit_utils import import_spirit, util, plotting, data, gneb_workflow
 
@@ -16,16 +15,9 @@ def main():
     import os
     args = parser.parse_args()
 
-    if args.dry_run:
-        print("performing dry run!")
-
-    output_folder = args.output_folder
-    if not os.path.exists(args.output_folder):
-        os.makedirs(args.output_folder)
-
-    print("Saving output to:", args.output_folder)
-    spirit_info = import_spirit.find_and_insert("~/Coding", stop_on_first_viable=True, choose = lambda x: (not x.cuda) and (x.openMP) )[0]
-    print(spirit_info)
+    def choose_spirit(x):
+        return "15eae12a1ae1a11a08b8ba0e8ef7befc4884452b".startswith(x.revision) and x.openMP
+    spirit_info = import_spirit.find_and_insert("~/Coding", stop_on_first_viable=True, choose = choose_spirit )[0]
 
     from spirit import state, configuration, simulation, io, geometry, chain, transition, hamiltonian
     from spirit.parameters import gneb
