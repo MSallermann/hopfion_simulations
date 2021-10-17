@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-o',  dest="output_folder", type=str, nargs='?', default="output", help='The output folder')
-parser.add_argument('-t',  dest="output_tag", type=str, nargs='?', default="", help='The output file tag')
 parser.add_argument('-f',  dest="input_file", type=str, nargs='?', default="input.cfg", help='The input file')
 parser.add_argument('-ic', dest="initial_chain",   required=False, type=str, nargs='?', help='The initial chain')
 
@@ -25,7 +24,8 @@ def main():
 
     gnw = gneb_workflow.GNEB_Node(args.output_folder, initial_chain_file=args.initial_chain, input_file=args.input_file, output_folder=args.output_folder)
 
-    gnw.n_iterations_check = 500
+    gnw.n_iterations_check = 2000
+    gnw.convergence = 5e-5
 
     def state_prepare_cb(gnw, p_state):
         hamiltonian.set_anisotropy(p_state, 1e-3, [0,0,1])
