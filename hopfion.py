@@ -7,8 +7,11 @@ parser.add_argument('-o', dest="output_folder", type=str, nargs='?', default="ou
 parser.add_argument('-p', dest="plot_folder", type=str, nargs='?', default="plots", help='The plot folder, relative to output folder')
 parser.add_argument('-t', dest="output_tag", type=str, nargs='?', default="<time>", help='The output file tag')
 parser.add_argument('-f', dest="input_file", type=str, nargs='?', default="input.cfg", help='The input file')
+parser.add_argument('-ii', dest="initial_image", required=False, type=str, nargs='?', help='The initial image')
 
-from spirit_python_utilities.spirit_utils import import_spirit, util, plotting, Spin_System
+
+from spirit_python_utilities.spirit_utils import import_spirit, util, plotting
+from spirit_python_utilities.spirit_utils.data import Spin_System, spin_system_from_p_state
 
 def main():
     import os
@@ -23,7 +26,8 @@ def main():
         os.makedirs(plot_folder)
 
     print("Saving output to:", args.output_folder)
-    spirit_info = import_spirit.find_and_insert("~/Coding")[0]
+    spirit_info = import_spirit.find_and_insert("~/Coding", choose = lambda x : x.cuda==False)[0]
+    print(spirit_info)
 
     from spirit import state, configuration, simulation, io, geometry, chain, transition
     from spirit.parameters import gneb
@@ -33,15 +37,18 @@ def main():
         util.set_output_folder(p_state, args.output_folder, tag=args.output_tag)
         n_cells = geometry.get_n_cells(p_state)
 
-        configuration.plus_z(p_state)
-        configuration.hopfion(p_state, radius=3)
+        if args.initial_image:
+            io.image_read(p_state, args.initial_image)
+        else:
+            configuration.plus_z(p_state)
+            configuration.hopfion(p_state, radius=3)
 
         io.image_write(p_state, os.path.join(args.output_folder, "initial_hopfion.ovf"))
         simulation.start(p_state, simulation.METHOD_LLG, simulation.SOLVER_LBFGS_OSO)
         io.image_write(p_state, os.path.join(args.output_folder, "final_hopfion.ovf"))
 
         import matplotlib.pyplot as plt
-        spin_system = Spin_System.spin_system_from_p_state(p_state)
+        spin_system = spin_system_from_p_state(p_state)
 
         c_val = int(n_cells[2]/2)
         print(c_val)
