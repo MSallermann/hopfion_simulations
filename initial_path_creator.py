@@ -13,13 +13,14 @@ def main(output_file, input_file, noi, background, radius, hopfion_normal, mode)
         util.set_output_folder(p_state, os.path.dirname(output_file), tag="")
         chain.set_length(p_state, noi)
 
+        configuration.domain(p_state, background, idx_image=0)
         configuration.hopfion(p_state, radius, normal=hopfion_normal, idx_image=0)
         simulation.start(p_state, simulation.METHOD_LLG, simulation.SOLVER_LBFGS_OSO, n_iterations = 1, idx_image=0)
 
-        configuration.domain(p_state, background ,idx_image=noi-1)
+        configuration.domain(p_state, background, idx_image=noi-1)
         simulation.start(p_state, simulation.METHOD_LLG, simulation.SOLVER_LBFGS_OSO, n_iterations = 1, idx_image=noi-1)
 
-        transition.homogeneous(p_state,0,noi-1)
+        transition.homogeneous(p_state, 0, noi-1)
 
         io.chain_write(p_state, output_file)
 
