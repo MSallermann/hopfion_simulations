@@ -12,7 +12,7 @@ parser.add_argument('-if', dest="final_image",   required=False, type=str, nargs
 parser.add_argument('-ic', dest="initial_chain",   required=False, type=str, nargs='?', help='The initial chain')
 parser.add_argument('--dry', dest="dry_run", action="store_true")
 
-from spirit_python_utilities.spirit_utils import import_spirit, util, plotting, Spin_System
+from spirit_python_utilities.spirit_utils import import_spirit, util, plotting, data
 
 def main():
 
@@ -42,11 +42,14 @@ def main():
         import matplotlib.pyplot as plt
 
         noi = -1
-        if args.initial_image and args.final_image:
+        if args.initial_image:
             noi = 10
             chain.set_length(p_state, noi)
             io.image_read(p_state, args.initial_image, idx_image_inchain=0)
-            io.image_read(p_state, args.final_image, idx_image_inchain=noi-1)
+            if args.final_image:
+                io.image_read(p_state, args.final_image, idx_image_inchain=noi-1)
+            else:
+                configuration.plus_z(p_state, idx_image=noi-1)
             transition.homogeneous(p_state, 0, noi-1)
         elif args.initial_chain:
             io.chain_read(p_state, args.initial_chain)
@@ -54,13 +57,15 @@ def main():
         else:
             raise Exception("No initial chain or initial and final image supplied")
 
-        energy_path = plotting.energy_path_from_p_state(p_state)
-        print(energy_path.total_energy)
+        simulation.start(p_state, simulation.METHOD_GNEB, simulation.SOLVER_VP_OSO, n_iterations = 1)
 
-        plotting.plot_energy_path(energy_path, ax=plt.gca())
+        energy_path = data.energy_path_from_p_state(p_state)
+        plotting.plot_energy_path(energy_path, ax=plt.gca(), normalize_reaction_coordinate=False)
         plt.tight_layout()
         plt.savefig(plot_folder + "/path_energy_before_gneb.png", dpi=300)
         plt.close()
+
+        io.chain_write(p_state, args.output_folder + "/initial_chain.ovf")
 
         if args.dry_run:
             return
