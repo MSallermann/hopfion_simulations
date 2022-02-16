@@ -3,7 +3,6 @@ import sys
 from typing import no_type_check
 import compute_abc
 
-
 def main():
     ### Import Spirit modules
     from spirit import state
@@ -19,37 +18,31 @@ def main():
     cfgfile = "input.cfg"
     quiet = False
 
-    N_MODES = 10
-    N_CELL = [30, 30, 30]
-    Jij_base = [61, -10, 0, -5]
+    CHAIN_FILE = "/home/moritz/hopfion_simulations/output_bogo_30_unpinned_sc_ci_shrinking/chain.ovf"
 
+    N_MODES = 20
 
-    for lam in [-0.2,-0.1,-0.05, 1]:
+    for K in [0]:
         with state.State(cfgfile, quiet) as p_state:
-            geometry.set_n_cells(p_state, N_CELL)
+            io.chain_read(p_state, CHAIN_FILE)
 
-            Jij = compute_abc.get_degenerate_jij(Jij_base, compute_abc.SC, 1, lam)
+            for idx in [8]:
+                # hamiltonian.set_anisotropy(p_state, K, [0,0,1], idx_image=0)
+                # simulation.start(p_state, simulation.METHOD_LLG, simulation.SOLVER_LBFGS_OSO, idx_image=0)
 
-            hamiltonian.set_exchange(p_state, len(Jij), Jij)
+                parameters.ema.set_n_modes(p_state, N_MODES, idx_image=idx)
+                parameters.ema.set_sparse(p_state, True, idx_image=idx)
+                simulation.start(p_state, simulation.METHOD_EMA, n_iterations=1, idx_image = idx)
 
-            configuration.plus_z(p_state)
-            configuration.hopfion(p_state, radius=3, normal=[1,1,1])
-
-            simulation.start(p_state, simulation.METHOD_LLG, simulation.SOLVER_LBFGS_OSO)
-
-            parameters.ema.set_n_modes(p_state, N_MODES)
-            parameters.ema.set_sparse(p_state, True)
-
-            simulation.start(p_state, simulation.METHOD_EMA, n_iterations=1)
-            io.eigenmodes_write(p_state, "eigenmodes_{}.ovf".format(lam))
+                io.eigenmodes_write(p_state, "eigenmodes_sp_{}.ovf".format(K), idx_image=idx)
 
 if __name__ == "__main__":
-    from spirit_python_utilities.spirit_utils import import_spirit, gneb_workflow, data, plotting
+    from spirit_python_utilities.spirit_extras import import_spirit, gneb_workflow, data, plotting
 
     os.environ["OMP_NUM_THREADS"] = "16"
 
     def choose_spirit(x):
-        return "f5e4ae637879c".startswith(x.revision) and x.openMP and x.pinning # check for solver info revision and openMP and pinning
+        return "afeb6181bd4f1".startswith(x.revision) and x.openMP and x.pinning # check for solver info revision and openMP and pinning
     spirit_info = import_spirit.find_and_insert("~/Coding", stop_on_first_viable=True, choose = choose_spirit )[0]
 
     main()

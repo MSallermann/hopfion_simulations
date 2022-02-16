@@ -1,6 +1,6 @@
 
 import matplotlib.pyplot as plt
-from spirit_python_utilities.spirit_utils import import_spirit, gneb_workflow
+from spirit_python_utilities.spirit_extras import import_spirit, gneb_workflow
 
 def main(output_folder, initial_chain, input_file):
 

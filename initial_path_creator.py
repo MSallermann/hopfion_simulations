@@ -1,6 +1,6 @@
-from spirit_python_utilities.spirit_utils import import_spirit, util
+from spirit_python_utilities.spirit_extras import import_spirit, util
 
-def main(output_file, input_file, noi, background, radius, hopfion_normal, state_prepare_callback=None):
+def main(output_file, input_file, noi, background, radius, hopfion_normal, state_prepare_callback=None, shrinking_hopfion=False):
     from spirit import state, configuration, simulation, io, geometry, chain, transition
 
     import os
@@ -27,7 +27,11 @@ def main(output_file, input_file, noi, background, radius, hopfion_normal, state
         configuration.domain(p_state, background, idx_image=noi-1)
         simulation.start(p_state, simulation.METHOD_LLG, simulation.SOLVER_LBFGS_OSO, idx_image=noi-1)
 
-        transition.homogeneous(p_state, 0, noi-1)
+        if shrinking_hopfion:
+            for i in range(1, noi-1):
+                configuration.hopfion(p_state, radius * (1-(i-1)/noi), idx_image=i)
+        else:
+            transition.homogeneous(p_state, 0, noi-1)
 
         io.chain_write(p_state, output_file)
 

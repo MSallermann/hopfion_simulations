@@ -27,6 +27,19 @@ def ABC(J, lattice, lattice_constant=1):
     return mat.dot(J), mat # returns [A,B,C]
 
 
+def invert_ABC(ABC_old, lattice, lattice_constant, lam):
+    abc, mat = ABC([1,1,1,1], lattice, lattice_constant)
+
+    bigger_mat = np.zeros( shape=(4,4) )
+    bigger_mat[:3,:4] = mat
+    bigger_mat[3,1] = lam
+    J_new = np.linalg.inv(bigger_mat).dot( [*ABC_old,1] )
+
+    ABC_new = ABC(J_new, lattice, lattice_constant)[0]
+
+    assert( np.isclose(ABC_old, ABC_new).all() )
+    return J_new
+
 def get_degenerate_jij(J_old, lattice, lattice_constant, lam):
     ABC_old, mat = ABC(J_old, lattice, lattice_constant)
 
@@ -43,53 +56,180 @@ def get_degenerate_jij(J_old, lattice, lattice_constant, lam):
     assert( np.isclose(ABC_old, ABC_new).all() )
     return J_new
 
+def get_isotropic_solutions(A, B, lam):
+    ABC_tar = [A,B,6*B]
+
+    mat = ABC([1,1,1,1], SC)[1]
+
+    bigger_mat = np.zeros( shape=(4,4) )
+    bigger_mat[:3,:4] = mat
+    bigger_mat[3,1]   = lam
+    J_new = np.linalg.inv(bigger_mat).dot( [*ABC_tar,1] )
+
+    ABC_new = ABC(J_new, SC)[0]
+    assert(np.isclose(ABC_tar, ABC_new).all())
+
+    return J_new
+
+def get_B0_solutions(A, C, lam):
+    ABC_tar = [A,0,C]
+    mat = ABC([1,1,1,1], SC)[1]
+
+    bigger_mat = np.zeros( shape=(4,4) )
+    bigger_mat[:3,:4] = mat
+    bigger_mat[3,1]   = lam
+    J_new = np.linalg.inv(bigger_mat).dot( [*ABC_tar,1] )
+
+    ABC_new = ABC(J_new, SC)[0]
+    assert(np.isclose(ABC_tar, ABC_new).all())
+
+    return J_new
+
+def get_C0_solutions(A, B, lam):
+    ABC_tar = [A,B,0]
+    mat = ABC([1,1,1,1], SC)[1]
+
+    bigger_mat = np.zeros( shape=(4,4) )
+    bigger_mat[:3,:4] = mat
+    bigger_mat[3,1]   = lam
+    J_new = np.linalg.inv(bigger_mat).dot( [*ABC_tar,1] )
+
+    ABC_new = ABC(J_new, SC)[0]
+    print(ABC_new)
+    assert(np.isclose(ABC_tar, ABC_new).all())
+
+    return J_new
+
+def get_l0(A,B,C):
+    return np.sqrt((B+C)/A)
+
+def get_E0(A,B,C):
+    return np.sqrt(A * (B + C))
+
+def get_gamma(A,B,C):
+    return C/(C+B)
+
+def ABC_from_reduced(E0, l0, gamma):
+    A = E0 / l0
+    B = E0*l0 * (1 - gamma)
+    C = E0*l0 * gamma
+    return [A,B,C]
+
+def J_from_reduced(E0, l0, gamma, lam):
+    [A,B,C] = ABC_from_reduced(E0, l0, gamma)
+    J = invert_ABC([A, B, C], lattice=SC, lattice_constant=1, lam=lam)
+    return J
 
 if __name__ == "__main__":
-    J_old = [61,-10, 0, -5]
-    ABC_old, mat = ABC( J_old, SC)
+    # ABC_old, mat = ABC( J_old, SC)
+    # A_old, B_old, C_old = ABC_old
 
-    J_new = get_degenerate_jij(J_old, SC, 1, -0.1)
-    print(J_new)
-    exit() 
+    # J_iso = get_isotropic_solutions(A_old, B_old, lam=1)
+    # J_B0  = get_B0_solutions(A_old, 0.5*C_old, lam=1)
+    # J_C0  = get_C0_solutions(A_old, 3*B_old, lam=1)
 
-    J1_list = []
-    J2_list = []
-    J3_list = []
-    J4_list = []
-    lam_list = np.linspace(-1,1,500)
+    # ABC_iso = ABC(J_iso, SC)[0]
+    # ABC_B0  = ABC(J_B0, SC)[0]
+    # ABC_C0  = ABC(J_C0, SC)[0]
 
-    for lam in lam_list:
-        J_new = get_degenerate_jij(J_old, SC, 1, lam)
+    # print( "ABC_old", ABC_old )
+    # print( "ABC_iso", ABC_iso )
+    # print( "ABC_B0", ABC_B0 )
+    # print( "ABC_C0", ABC_C0 )
+    # print("---")
+    # print("J_iso", J_iso)
+    # print("J_B0",  J_B0)
+    # print("J_C0",  J_C0)
 
-        J1_list.append(J_new[0])
-        J2_list.append(J_new[1])
-        J3_list.append(J_new[2])
-        J4_list.append(J_new[3])
+    # print( ABC_iso[2], ABC_iso[1] * 6)
 
-        print(ABC(J_new, SC)[0])
-        print(J_new)
-        print("---")
+    J = [1, -0.25, 0.0004, -0.0001] # B = 0
+    J = [1, 0.3, 0.246, -0.793] # C = 0
+    J = [1, 0.2, -0.273, -0.174] # C = 6B
 
-    J1_list = np.array(J1_list)
-    J2_list = np.array(J2_list)
-    J3_list = np.array(J3_list)
-    J4_list = np.array(J4_list)
+    # J = [61,-10, 0, -5]
 
-    import matplotlib.pyplot as plt
+    [A,B,C] = ABC(J, SC)[0]
 
-    plt.plot(lam_list, J1_list, label="J1")
-    plt.plot(lam_list, J2_list, label="J2")
-    plt.plot(lam_list, J3_list, label="J3")
-    plt.plot(lam_list, J4_list, label="J4")
+    A_new = 0.5
+    B_new = A * B / A_new
+    C_new = A * C / A_new
+    ABC_new = [A_new, B_new, C_new]
 
-    plt.legend()
-    plt.xlabel(r"$\lambda$")
-    plt.savefig("J.png", dpi=300)
+    J_new = invert_ABC(ABC_new, SC, lattice_constant = 1, lam = -1)
+    print("A,B,C = ", A,B,C)
+    print("A,B,C_new = ", *ABC_new)
+    print("J_new = ", J_new)
+    print( max(C_new, 6*B_new), 6.5*A_new )
+    print( max(C, 6*B), 6.5*A )
 
-    plt.close()
-    plt.plot(lam_list, J2_list/J1_list, label="J2/J1" )
-    plt.plot(lam_list, J3_list/J1_list, label="J3/J1" )
-    plt.plot(lam_list, J4_list/J1_list, label="J4/J1" )
-    plt.legend()
-    plt.xlabel(r"$\lambda$")
-    plt.savefig("J_ratio.png", dpi=300)
+    print(f"E0 = {get_E0(A,B,C)} meV")
+    print(f"l0 = {get_l0(A,B,C)} AA")
+    print(f"gamma = {get_gamma(A,B,C)}")
+
+    for i in range(8):
+        gamma   = float(i)/7.0
+        l0      = 3 # AA
+        E0      = 1 # meV
+        J       = J_from_reduced(E0, l0, gamma, lam=1)
+        [A,B,C] = ABC_from_reduced(E0, l0, gamma)
+        print(J)
+        print(A, B, C)
+
+    # J = [1, 0.2, -0.273, -0.174] # C = 6B
+    # [A,B,C] = ABC(J, SC)[0]
+    # print(A,B,C)
+
+    # [A,B,C] = ABC(J, SC)[0]
+    # print(A,B,C)
+
+    # exit()
+
+    # J_old = [61, -10, 0, -5]
+
+    # J_new = get_degenerate_jij(J_old, SC, 1, 0.04)
+    # print(J_new)
+
+    # J1_list = []
+    # J2_list = []
+    # J3_list = []
+    # J4_list = []
+    # lam_list = np.linspace(-1,1,500)
+
+    # for lam in lam_list:
+    #     J_new = get_degenerate_jij(J_old, SC, 1, lam)
+
+    #     J1_list.append(J_new[0])
+    #     J2_list.append(J_new[1])
+    #     J3_list.append(J_new[2])
+    #     J4_list.append(J_new[3])
+    #     print(lam)
+    #     print(ABC(J_new, SC)[0])
+    #     print(J_new)
+    #     print("---")
+
+
+
+    # J1_list = np.array(J1_list)
+    # J2_list = np.array(J2_list)
+    # J3_list = np.array(J3_list)
+    # J4_list = np.array(J4_list)
+
+    # import matplotlib.pyplot as plt
+
+    # plt.plot(lam_list, J1_list, label="J1")
+    # plt.plot(lam_list, J2_list, label="J2")
+    # plt.plot(lam_list, J3_list, label="J3")
+    # plt.plot(lam_list, J4_list, label="J4")
+
+    # plt.legend()
+    # plt.xlabel(r"$\lambda$")
+    # plt.savefig("J.png", dpi=300)
+
+    # plt.close()
+    # plt.plot(lam_list, J2_list/J1_list, label="J2/J1" )
+    # plt.plot(lam_list, J3_list/J1_list, label="J3/J1" )
+    # plt.plot(lam_list, J4_list/J1_list, label="J4/J1" )
+    # plt.legend()
+    # plt.xlabel(r"$\lambda$")
+    # plt.savefig("J_ratio.png", dpi=300)

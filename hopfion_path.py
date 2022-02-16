@@ -12,7 +12,7 @@ parser.add_argument('-if', dest="final_image",   required=False, type=str, nargs
 parser.add_argument('-ic', dest="initial_chain",   required=False, type=str, nargs='?', help='The initial chain')
 parser.add_argument('--dry', dest="dry_run", action="store_true")
 
-from spirit_python_utilities.spirit_utils import import_spirit, util, plotting, data
+from spirit_python_utilities.spirit_extras import import_spirit, util, plotting, data
 
 def main():
 

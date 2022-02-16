@@ -10,8 +10,8 @@ parser.add_argument('-f', dest="input_file", type=str, nargs='?', default="input
 parser.add_argument('-ii', dest="initial_image", required=False, type=str, nargs='?', help='The initial image')
 
 
-from spirit_python_utilities.spirit_utils import import_spirit, util, plotting
-from spirit_python_utilities.spirit_utils.data import Spin_System, spin_system_from_p_state
+from spirit_python_utilities.spirit_extras import import_spirit, util, plotting
+from spirit_python_utilities.spirit_extras.data import Spin_System, spin_system_from_p_state
 
 def main():
     import os
