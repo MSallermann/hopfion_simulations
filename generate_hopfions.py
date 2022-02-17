@@ -1,4 +1,4 @@
-from spirit_extras.spirit_extras import import_spirit, gneb_workflow, data, plotting
+from spirit_extras import import_spirit, gneb_workflow, data, plotting
 spirit_info = import_spirit.find_and_insert("~/Coding/spirit", stop_on_first_viable=True )[0]
 print(spirit_info)
 

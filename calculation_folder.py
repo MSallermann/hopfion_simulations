@@ -9,6 +9,8 @@ class calculation_folder:
         self._initial_chain_file_name = "initial_chain.ovf"
         self.descriptor = {}
 
+        self._lock_file = os.path.join(self.output_folder, "~lock")
+
         if not os.path.exists(self.output_folder):
             os.makedirs(self.output_folder)
 
@@ -24,6 +26,23 @@ class calculation_folder:
         if os.path.exists(self.get_descriptor_file_path()):
             with open(self.get_descriptor_file_path(), "r") as f:
                 self.descriptor = json.load(f)
+
+    def lock(self):
+        """Checks for lockfile in folder. If no lock file is present the lock file is created and True is returned. Can be used to signal to other processes"""
+        if not os.path.exists(self._lock_file):
+            with open(self._lock_file) as f:
+                pass
+            return True
+        else:
+            return False
+
+    def unlock(self):
+        """Unlocks"""
+        if os.path.exists(self._lock_file):
+            os.remove(self._lock_file)
+            return True
+        else:
+            return False
 
     def __del__(self):
         with open(self.get_descriptor_file_path(), "w") as f:
