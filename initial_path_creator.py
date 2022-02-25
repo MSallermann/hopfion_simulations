@@ -1,6 +1,6 @@
-from spirit_python_utilities.spirit_extras import import_spirit, util
+from spirit_extras import import_spirit, util
 
-def main(output_file, input_file, noi, background, radius, hopfion_normal, state_prepare_callback=None, shrinking_hopfion=False):
+def main(output_file, input_file, noi, background, radius, hopfion_normal, state_prepare_callback=None, input_image = None, shrinking_hopfion=False):
     from spirit import state, configuration, simulation, io, geometry, chain, transition
 
     import os
@@ -10,18 +10,20 @@ def main(output_file, input_file, noi, background, radius, hopfion_normal, state
     print("Saving output to:", output_file)
 
     with state.State(input_file) as p_state:
-        state_prepare_callback(p_state)
-
-        configuration.domain(p_state, background, idx_image=0)
+        util.set_output_folder(p_state, os.path.dirname(output_file), tag="")
 
         if state_prepare_callback:
             state_prepare_callback(p_state)
 
-        util.set_output_folder(p_state, os.path.dirname(output_file), tag="")
         chain.set_length(p_state, noi)
 
-        configuration.hopfion(p_state, radius, normal=hopfion_normal, idx_image=0)
-        configuration.add_noise(p_state, 1e-2, idx_image=0)
+        if not input_image:
+            configuration.domain(p_state, background, idx_image=0)
+            configuration.hopfion(p_state, radius, normal=hopfion_normal, idx_image=0)
+            configuration.add_noise(p_state, 1e-2, idx_image=0)
+        else:
+            io.image_read(p_state, input_image, idx_image_infile=0, idx_image_inchain=0)
+
         simulation.start(p_state, simulation.METHOD_LLG, simulation.SOLVER_LBFGS_OSO, idx_image=0)
 
         configuration.domain(p_state, background, idx_image=noi-1)
@@ -40,6 +42,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-o',           dest="output_file", type=str, nargs='?', default="output.ovf", help='The output folder')
     parser.add_argument('-f',           dest="input_file",  type=str, nargs='?', default="input.cfg", help='The input file')
+    parser.add_argument('-ii',          dest="input_image", type=str, nargs='?', default=None, help='The input image (ovf file)')
     parser.add_argument('--noi',        dest="noi",         type=int, nargs='?', default=10, help='The number of images')
     parser.add_argument('--mode',       dest="mode",        type=str, nargs='?', default=10, help='mode')
     parser.add_argument('--radius',     dest="radius",      type=float, help='radius of initial hopfion', required=True)
@@ -49,6 +52,8 @@ if __name__ == "__main__":
     parser.add_argument('--pinned_radius', dest="pinned_radius", nargs='?', default=-1, help='the radius of the sphere of pinned spins')
 
     args = parser.parse_args()
+
+    input_image = args.input_image
 
     normal     = [float(f) for f in args.normal]
     background = [float(f) for f in args.background]
@@ -68,4 +73,4 @@ if __name__ == "__main__":
         if(args.pinned_radius > 0):
             configuration.set_pinned(p_state, True, border_spherical=args.pinned_radius, inverted=True)
 
-    main( os.path.abspath(args.output_file), args.input_file, args.noi, background, args.radius, normal, state_prepare_cb)
+    main( os.path.abspath(args.output_file), args.input_file, args.noi, background, args.radius, normal, state_prepare_cb, args.input_image)
