@@ -32,7 +32,6 @@ def main(path, delaunay_mesh_path):
         if energy_path.noi()-1 - idx_sp >= 2:
             label_indices.append( int( (energy_path.noi()-1 + idx_sp)/2 ) )
 
-
         label_indices.append( energy_path.noi()-1 )
 
         for i, label_idx in enumerate(label_indices):
@@ -76,7 +75,7 @@ if __name__ == "__main__":
 
     spirit_info = import_spirit.find_and_insert("~/Coding/spirit_hopfion", stop_on_first_viable=True )[0]
 
-    import glob 
+    import glob
 
     files = glob.glob( args.input_folder)
 
