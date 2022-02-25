@@ -3,7 +3,7 @@ SC = 0
 FCC = 1
 BCC = 2
 
-def ABC(J, lattice, lattice_constant=1):
+def ABC_Matrix(lattice, lattice_constant=1):
 
     if lattice == SC:
         a_s = 1/lattice_constant * np.array([1/2, 2, 2, 2])
@@ -24,81 +24,11 @@ def ABC(J, lattice, lattice_constant=1):
         c_s = -lattice_constant * np.array([7/96, 1/24, 2/3, 197/96])
         mat = np.array( [a_s,b_s,c_s] )
 
-    return mat.dot(J), mat # returns [A,B,C]
+    return mat # returns [A,B,C]
 
-
-def invert_ABC(ABC_old, lattice, lattice_constant, lam):
-    abc, mat = ABC([1,1,1,1], lattice, lattice_constant)
-
-    bigger_mat = np.zeros( shape=(4,4) )
-    bigger_mat[:3,:4] = mat
-    bigger_mat[3,1] = lam
-    J_new = np.linalg.inv(bigger_mat).dot( [*ABC_old,1] )
-
-    ABC_new = ABC(J_new, lattice, lattice_constant)[0]
-
-    assert( np.isclose(ABC_old, ABC_new).all() )
-    return J_new
-
-def get_degenerate_jij(J_old, lattice, lattice_constant, lam):
-    ABC_old, mat = ABC(J_old, lattice, lattice_constant)
-
-    bigger_mat = np.zeros( shape=(4,4) )
-    bigger_mat[:3,:4] = mat
-    bigger_mat[3,1] = lam
-    J_new = np.linalg.inv(bigger_mat).dot( [*ABC_old,1] )
-
-    ABC_new = ABC(J_new, lattice, lattice_constant)[0]
-
-    print(ABC_old)
-    print(ABC_new)
-
-    assert( np.isclose(ABC_old, ABC_new).all() )
-    return J_new
-
-def get_isotropic_solutions(A, B, lam):
-    ABC_tar = [A,B,6*B]
-
-    mat = ABC([1,1,1,1], SC)[1]
-
-    bigger_mat = np.zeros( shape=(4,4) )
-    bigger_mat[:3,:4] = mat
-    bigger_mat[3,1]   = lam
-    J_new = np.linalg.inv(bigger_mat).dot( [*ABC_tar,1] )
-
-    ABC_new = ABC(J_new, SC)[0]
-    assert(np.isclose(ABC_tar, ABC_new).all())
-
-    return J_new
-
-def get_B0_solutions(A, C, lam):
-    ABC_tar = [A,0,C]
-    mat = ABC([1,1,1,1], SC)[1]
-
-    bigger_mat = np.zeros( shape=(4,4) )
-    bigger_mat[:3,:4] = mat
-    bigger_mat[3,1]   = lam
-    J_new = np.linalg.inv(bigger_mat).dot( [*ABC_tar,1] )
-
-    ABC_new = ABC(J_new, SC)[0]
-    assert(np.isclose(ABC_tar, ABC_new).all())
-
-    return J_new
-
-def get_C0_solutions(A, B, lam):
-    ABC_tar = [A,B,0]
-    mat = ABC([1,1,1,1], SC)[1]
-
-    bigger_mat = np.zeros( shape=(4,4) )
-    bigger_mat[:3,:4] = mat
-    bigger_mat[3,1]   = lam
-    J_new = np.linalg.inv(bigger_mat).dot( [*ABC_tar,1] )
-
-    ABC_new = ABC(J_new, SC)[0]
-    print(ABC_new)
-    assert(np.isclose(ABC_tar, ABC_new).all())
-
-    return J_new
+def ABC(J):
+    matrix = ABC_Matrix(lattice=SC, lattice_constant=1)
+    return matrix.dot(J)
 
 def get_l0(A,B,C):
     return np.sqrt((B+C)/A)
@@ -120,7 +50,49 @@ def J_from_reduced(E0, l0, gamma, lam):
     J = invert_ABC([A, B, C], lattice=SC, lattice_constant=1, lam=lam)
     return J
 
+def invert_ABC(ABC):
+    """ Invert by fixing J1 to 1"""
+
+    M_matrix = ABC_Matrix(lattice=SC, lattice_constant=1)
+    first_column = M_matrix[:,0]
+    sub_matrix   = M_matrix[:,1:]
+
+    J = np.linalg.inv(sub_matrix).dot( np.asarray(ABC) - first_column )
+    return np.array([1, *J])
+
+def J_from_reduced(E0, l0, gamma):
+    ABC = ABC_from_reduced(E0, l0, gamma)
+    return invert_ABC(ABC)
+
 if __name__ == "__main__":
+
+    J = [1, -0.25, 0.0004, -0.0001] # B = 0
+    matrix = ABC_Matrix( lattice=SC, lattice_constant=1 )
+    ABC = matrix.dot(J)
+    J_new = invert_ABC(ABC)
+    print( f"E0 = {get_E0(*ABC)}" )
+    print(f"J = {J}")
+    print(f"ABC = {ABC}")
+    print(f"J_new = {J_new}")
+
+    J = [1, 0.3, 0.246, -0.793] # C = 0
+    matrix = ABC_Matrix( lattice=SC, lattice_constant=1 )
+    ABC = matrix.dot(J)
+    J_new = invert_ABC(ABC)
+    print( f"E0 = {get_E0(*ABC)}" )
+    print(f"J = {J}")
+    print(f"ABC = {ABC}")
+    print(f"J_new = {J_new}")
+
+    J = [1, 0.2, -0.273, -0.174] # C = 6B
+    matrix = ABC_Matrix( lattice=SC, lattice_constant=1 )
+    ABC = matrix.dot(J)
+    J_new = invert_ABC(ABC)
+    print( f"E0 = {get_E0(*ABC)}" )
+    print(f"J = {J}")
+    print(f"ABC = {ABC}")
+    print(f"J_new = {J_new}")
+
     # ABC_old, mat = ABC( J_old, SC)
     # A_old, B_old, C_old = ABC_old
 
@@ -143,38 +115,35 @@ if __name__ == "__main__":
 
     # print( ABC_iso[2], ABC_iso[1] * 6)
 
-    J = [1, -0.25, 0.0004, -0.0001] # B = 0
-    J = [1, 0.3, 0.246, -0.793] # C = 0
-    J = [1, 0.2, -0.273, -0.174] # C = 6B
 
     # J = [61,-10, 0, -5]
 
-    [A,B,C] = ABC(J, SC)[0]
+    # [A,B,C] = ABC(J, SC)[0]
 
-    A_new = 0.5
-    B_new = A * B / A_new
-    C_new = A * C / A_new
-    ABC_new = [A_new, B_new, C_new]
+    # A_new = 0.5
+    # B_new = A * B / A_new
+    # C_new = A * C / A_new
+    # ABC_new = [A_new, B_new, C_new]
 
-    J_new = invert_ABC(ABC_new, SC, lattice_constant = 1, lam = -1)
-    print("A,B,C = ", A,B,C)
-    print("A,B,C_new = ", *ABC_new)
-    print("J_new = ", J_new)
-    print( max(C_new, 6*B_new), 6.5*A_new )
-    print( max(C, 6*B), 6.5*A )
+    # J_new = invert_ABC(ABC_new, SC, lattice_constant = 1, lam = -1)
+    # print("A,B,C = ", A,B,C)
+    # print("A,B,C_new = ", *ABC_new)
+    # print("J_new = ", J_new)
+    # print( max(C_new, 6*B_new), 6.5*A_new )
+    # print( max(C, 6*B), 6.5*A )
 
-    print(f"E0 = {get_E0(A,B,C)} meV")
-    print(f"l0 = {get_l0(A,B,C)} AA")
-    print(f"gamma = {get_gamma(A,B,C)}")
+    # print(f"E0 = {get_E0(A,B,C)} meV")
+    # print(f"l0 = {get_l0(A,B,C)} AA")
+    # print(f"gamma = {get_gamma(A,B,C)}")
 
-    for i in range(8):
-        gamma   = float(i)/7.0
-        l0      = 3 # AA
-        E0      = 1 # meV
-        J       = J_from_reduced(E0, l0, gamma, lam=1)
-        [A,B,C] = ABC_from_reduced(E0, l0, gamma)
-        print(J)
-        print(A, B, C)
+    # for i in range(8):
+    #     gamma   = float(i)/7.0
+    #     l0      = 3 # AA
+    #     E0      = 1 # meV
+    #     J       = J_from_reduced(E0, l0, gamma, lam=1)
+    #     [A,B,C] = ABC_from_reduced(E0, l0, gamma)
+    #     print(J)
+    #     print(A, B, C)
 
     # J = [1, 0.2, -0.273, -0.174] # C = 6B
     # [A,B,C] = ABC(J, SC)[0]
