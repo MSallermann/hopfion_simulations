@@ -44,6 +44,6 @@ class calculation_folder:
         else:
             return False
 
-    def __del__(self):
+    def to_json(self):
         with open(self.get_descriptor_file_path(), "w") as f:
             f.write(json.dumps(self.descriptor, indent=4))
