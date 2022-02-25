@@ -1,3 +1,5 @@
 *.txt
 *.ovf
 *.png
+gamma_l0*/
+__pycache__
