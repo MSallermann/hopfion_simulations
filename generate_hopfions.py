@@ -1,5 +1,5 @@
 from spirit_extras import import_spirit, gneb_workflow, data, plotting
-spirit_info = import_spirit.find_and_insert("~/Coding/spirit", stop_on_first_viable=True )[0]
+spirit_info = import_spirit.find_and_insert("~/Coding/spirit_hopfion", stop_on_first_viable=True )[0]
 print(spirit_info)
 
 import os
@@ -14,21 +14,40 @@ SCRIPT_DIR         = os.path.dirname( os.path.abspath(__file__) )
 OUTPUT_BASE_FOLDER = os.path.join(SCRIPT_DIR, "gamma_l0_calculations")
 INPUT_FILE         = SCRIPT_DIR + "/input.cfg"
 
+def gamma_l0_to_name(gamma, l0): 
+    return "gamma_{:.3f}_l0_{:.3f}".format(gamma, l0)
+
 def main():
     gamma_list = [i/7.0 for i in range(8)]
-    gamma_list = [1.0]
-    l0_list    = [2.5, 3.0, 3.5, 4.0, 4.5, 5.0]
+    l0_list    = np.array([1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0])[::-1]
 
-    gamma_l0_list = [[gamma, l0] for gamma in gamma_list for l0 in l0_list]
+    # gamma_list = [i/7.0 for i in range(2)]
+    # l0_list = np.array([1.0])
+    # gamma_l0_list = [[gamma, l0] for gamma in gamma_list for l0 in l0_list]
 
-    for gamma, l0 in gamma_l0_list:
+    for i, (gamma, l0) in enumerate(gamma_l0_list):
+        print(f"gamma {gamma}, l0 {l0}")
 
-        name = "gamma_{:.3f}_l0_{:.3f}".format(gamma, l0)
-
+        name = gamma_l0_to_name(gamma, l0)
         folder = calculation_folder(output_folder = os.path.join(OUTPUT_BASE_FOLDER, name))
 
-        E0      = 1.0 # me
-        J       = compute_abc.J_from_reduced(E0, l0, gamma, lam=1.0).tolist()
+        if "initial_chain_file" in folder.descriptor.keys():
+            if os.path.exists(os.path.join( folder.output_folder, folder.descriptor.get("initial_chain_file", "") ) ):
+                continue
+
+        input_image = None
+        # if l0 != max(l0_list):
+        #     try:
+        #         name_prev   = gamma_l0_to_name(gamma, l0_list[ np.argwhere(l0_list == l0 )[0,0] - 1 ] )
+        #         folder_prev = calculation_folder(output_folder = os.path.join(OUTPUT_BASE_FOLDER, name_prev))
+        #         input_image = os.path.join( folder_prev.output_folder, folder_prev.descriptor["initial_chain_file"] )
+        #     except Exception as e:
+        #         input_image = None
+        #         # print(e)
+        # print(input_image)
+
+        E0      = 0.025 # me
+        J       = compute_abc.J_from_reduced(E0, l0, gamma).tolist()
         ABC     = compute_abc.ABC_from_reduced(E0, l0, gamma)
 
         n_cells = [64, 64, 64]
@@ -49,7 +68,8 @@ def main():
             configuration.domain(p_state, [0,0,1])
             hamiltonian.set_exchange(p_state, len(J), J)
 
-        initial_path_creator.main(output_file = folder.get_initial_chain_file_path(), input_file = INPUT_FILE, noi=10, background=[0,0,1], radius=5, hopfion_normal=[0,0,1], state_prepare_callback = __state_prepare_cb, shrinking_hopfion = False)
+        folder.to_json()
+        initial_path_creator.main(output_file = folder.get_initial_chain_file_path(), input_file = INPUT_FILE, noi=10, background=[0,0,1], radius=5, hopfion_normal=[0,0,1], input_image=input_image, state_prepare_callback = __state_prepare_cb, shrinking_hopfion = False)
 
 if __name__ == "__main__":
     main()
