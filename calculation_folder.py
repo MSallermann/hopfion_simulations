@@ -30,19 +30,29 @@ class calculation_folder:
     def lock(self):
         """Checks for lockfile in folder. If no lock file is present the lock file is created and True is returned. Can be used to signal to other processes"""
         if not os.path.exists(self._lock_file):
-            with open(self._lock_file) as f:
+            with open(self._lock_file, "w") as f:
                 pass
             return True
         else:
             return False
 
+    def locked(self):
+        """Check if folder is locked."""
+        if not os.path.exists(self._lock_file):
+            return False
+        else:
+            return True
+
     def unlock(self):
-        """Unlocks"""
+        """Unlocks."""
         if os.path.exists(self._lock_file):
             os.remove(self._lock_file)
             return True
         else:
             return False
+
+    def to_abspath(self, relative_path):
+        return os.path.join(self.output_folder, relative_path)
 
     def to_json(self):
         with open(self.get_descriptor_file_path(), "w") as f:
