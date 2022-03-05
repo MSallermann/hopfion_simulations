@@ -89,7 +89,7 @@ if __name__ == "__main__":
 
             calculation_name = os.path.basename(os.path.normpath(input_path))
             # Identifier
-            identify = time = now.strftime("gneb_preconverge#%m_%d_%Y_%H_%M_%S")
+            identify = time = now.strftime("gneb_ci#%m_%d_%Y_%H_%M_%S")
 
             output_path = os.path.join(OUTPUT_SCRATCH, identify, calculation_name)
 
