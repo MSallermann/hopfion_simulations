@@ -24,7 +24,7 @@ def main(input_calculation_folder_path, output_calculation_folder_path=None):
     else:
         calculation_out = calculation
 
-    output_path_gneb = os.path.join(calculation_out.output_folder, "gneb_preconverge_test")
+    output_path_gneb = os.path.join(calculation_out.output_folder, "gneb_preconverge")
 
     if os.path.exists(output_path_gneb):
         print(f"Skipping because {output_path_gneb} already exists")
@@ -32,7 +32,7 @@ def main(input_calculation_folder_path, output_calculation_folder_path=None):
 
     # Where in the input calculation folder is the initial chain file saved?
     initial_chain_file = calculation.to_abspath(calculation.descriptor["initial_chain_file"])
-    initial_chain_file = calculation.to_abspath(os.path.join("gneb_preconverge", "chain.ovf"))
+    # initial_chain_file = calculation.to_abspath("initial_chain2.ovf")
 
     # Write state prepare callback
     def state_prepare_cb(gnw, p_state):
@@ -44,11 +44,12 @@ def main(input_calculation_folder_path, output_calculation_folder_path=None):
     # Settings for GNEB workflow
     gnw = gneb_workflow.GNEB_Node(name="gneb_preconverge", input_file = INPUT_FILE, output_folder = output_path_gneb, initial_chain_file = initial_chain_file)
     gnw.state_prepare_callback = state_prepare_cb
-    gnw.target_noi             = 16
-    gnw.max_total_iterations   = 100000
+    gnw.target_noi             = 32
+    gnw.max_total_iterations   = 50000
+    gnw.n_iterations_check     = 1000
     gnw.allow_split            = False
     gnw.setup_plot_callbacks()
-    gnw.convergence            = 1e-5
+    gnw.convergence            = 1e-2
     gnw.to_json()
     gnw.run()
 
