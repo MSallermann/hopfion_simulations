@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import calculation_folder
 import json
+import os
 
 def main(path):
     from spirit import state, geometry, chain, simulation, io
