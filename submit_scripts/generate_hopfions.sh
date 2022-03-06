@@ -4,4 +4,4 @@ source compiler-select intel
 source python-select py3k
 python -m pip install mpi4py --user
 python -m pip install --upgrade spirit-extras --user
-srun python preconverge_paths.py gamma_l0_calculations_preconverged/* -MPI
+srun python generate_hopfions.py

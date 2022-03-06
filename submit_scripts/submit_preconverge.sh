@@ -1,0 +1,1 @@
+sbatch -N4 --ntasks-per-node=4 --cpus-per-task=16 submit_scripts/preconverge_hopfions.sh -o "output.out.%j"
