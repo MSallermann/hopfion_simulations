@@ -8,6 +8,8 @@ import initial_path_creator, compute_abc
 import matplotlib.pyplot as plt
 from calculation_folder import calculation_folder
 
+import compute_max_angle
+
 import json
 
 SCRIPT_DIR         = os.path.dirname( os.path.abspath(__file__) )
@@ -19,11 +21,13 @@ def gamma_l0_to_name(gamma, l0):
 
 def main():
     gamma_list = [i/7.0 for i in range(8)]
-    l0_list    = np.array([1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0])[::-1]
+    l0_list    = np.array([1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0])[::-1]
+
+    NOI = 32
 
     # gamma_list = [i/7.0 for i in range(2)]
     # l0_list = np.array([1.0])
-    # gamma_l0_list = [[gamma, l0] for gamma in gamma_list for l0 in l0_list]
+    gamma_l0_list = [[gamma, l0] for gamma in gamma_list for l0 in l0_list]
 
     for i, (gamma, l0) in enumerate(gamma_l0_list):
         print(f"gamma {gamma}, l0 {l0}")
@@ -36,13 +40,13 @@ def main():
                 continue
 
         input_image = None
-        # if l0 != max(l0_list):
-        #     try:
-        #         name_prev   = gamma_l0_to_name(gamma, l0_list[ np.argwhere(l0_list == l0 )[0,0] - 1 ] )
-        #         folder_prev = calculation_folder(output_folder = os.path.join(OUTPUT_BASE_FOLDER, name_prev))
-        #         input_image = os.path.join( folder_prev.output_folder, folder_prev.descriptor["initial_chain_file"] )
-        #     except Exception as e:
-        #         input_image = None
+        if l0 != max(l0_list):
+            # try:
+            name_prev   = gamma_l0_to_name(gamma, l0_list[ np.argwhere(l0_list == l0 )[0,0] - 1 ] )
+            folder_prev = calculation_folder(output_folder = os.path.join(OUTPUT_BASE_FOLDER, name_prev))
+            input_image = os.path.join( folder_prev.output_folder, folder_prev.descriptor["initial_chain_file"] )
+            # except Exception as e:
+            #     input_image = None
         #         # print(e)
         # print(input_image)
 
@@ -69,7 +73,8 @@ def main():
             hamiltonian.set_exchange(p_state, len(J), J)
 
         folder.to_json()
-        initial_path_creator.main(output_file = folder.get_initial_chain_file_path(), input_file = INPUT_FILE, noi=10, background=[0,0,1], radius=5, hopfion_normal=[0,0,1], input_image=input_image, state_prepare_callback = __state_prepare_cb, shrinking_hopfion = False)
+        initial_path_creator.main(output_file = folder.get_initial_chain_file_path(), input_file = INPUT_FILE, noi=NOI, background=[0,0,1], radius=5, hopfion_normal=[0,0,1], input_image=input_image, state_prepare_callback = __state_prepare_cb, shrinking_hopfion = False)
+        compute_max_angle.main( folder.output_folder )
 
 if __name__ == "__main__":
     main()
