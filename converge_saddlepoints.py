@@ -44,6 +44,7 @@ def main(input_calculation_folder_path, output_calculation_folder_path=None):
     gnw.update_energy_path()
 
     gnw.prepare_moving_endpoints()
+    gnw.allow_split = False
     rx = gnw.current_energy_path.reaction_coordinate
     gnw.delta_Rx_left    = (rx[1] - rx[0])
     gnw.delta_Rx_right   = (rx[2] - rx[1])
