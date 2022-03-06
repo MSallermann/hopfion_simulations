@@ -48,6 +48,7 @@ def main(input_calculation_folder_path, output_calculation_folder_path=None):
     gnw.max_total_iterations   = 20000
     gnw.setup_plot_callbacks()
     gnw.convergence            = 1e-5
+    gnw.allow_split            = False
 
     # Update the energy path
     from spirit.parameters import gneb

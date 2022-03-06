@@ -46,6 +46,7 @@ def main(input_calculation_folder_path, output_calculation_folder_path=None):
     gnw.state_prepare_callback = state_prepare_cb
     gnw.target_noi             = 16
     gnw.max_total_iterations   = 100000
+    gnw.allow_split            = False
     gnw.setup_plot_callbacks()
     gnw.convergence            = 1e-5
     gnw.to_json()
