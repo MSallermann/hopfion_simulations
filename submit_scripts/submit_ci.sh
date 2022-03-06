@@ -1,0 +1,1 @@
+sbatch -N2 --ntasks-per-node=4 --cpus-per-task=16 hopfion_gneb_ci.sh -o "output_ci.out.%j"

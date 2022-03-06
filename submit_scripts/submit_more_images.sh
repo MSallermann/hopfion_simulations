@@ -1,0 +1,1 @@
+sbatch -N1 --ntasks-per-node=1 --cpus-per-task=64 hopfion_gneb_pre_more_images.sh -o "output.out.%j"
