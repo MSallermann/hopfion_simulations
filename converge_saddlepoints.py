@@ -7,43 +7,60 @@ import calculation_folder
 SCRIPT_DIR = os.path.dirname( os.path.abspath(__file__) )
 INPUT_FILE = SCRIPT_DIR + "/input.cfg"
 
-def main(path):
+def main(input_calculation_folder_path, output_calculation_folder_path=None):
+    # Read calculation folder from input path
+    calculation = calculation_folder.calculation_folder(input_calculation_folder_path)
 
-    calculation = calculation_folder.calculation_folder(path)
+    # If no output calculation folder is give we assume it is the same as the input
+    if output_calculation_folder_path is None:
+        output_calculation_folder_path = input_calculation_folder_path
 
-    print(path)
-    print("gamma = {}, l0 = {}".format(calculation.descriptor["gamma"], calculation.descriptor["l0"]))
+    if input_calculation_folder_path != output_calculation_folder_path:
+        # Create new calculation folder at output path
+        calculation_out = calculation_folder.calculation_folder(output_calculation_folder_path)
+        calculation_out.descriptor = calculation.descriptor.copy()
+        calculation_out.to_json()
+    else:
+        calculation_out = calculation
 
-    if os.path.exists( calculation.to_abspath("gneb_sp") ):
-        print("Skip")
+    output_path_gneb = os.path.join(calculation_out.output_folder, "gneb_sp")
+
+    if os.path.exists(output_path_gneb):
+        print(f"Skipping because {output_path_gneb} already exists")
         return
 
-    print("---")
+    initial_chain_file = calculation.to_abspath(os.path.join("gneb_ci", "chain.ovf"))
 
-    calculation.lock()
-
+    # Write state prepare callback
     def state_prepare_cb(gnw, p_state):
         from spirit import geometry, configuration, hamiltonian
         geometry.set_n_cells(p_state, calculation.descriptor["n_cells"])
         configuration.domain(p_state, [0,0,1])
         hamiltonian.set_exchange(p_state, len(calculation.descriptor["J"]), calculation.descriptor["J"])
 
-    initial_chain_file = calculation.to_abspath(os.path.join("gneb_preconverge" , "chain.ovf"))
-
-    gnw = gneb_workflow.GNEB_Node(name="gneb_sp", input_file=INPUT_FILE, output_folder = os.path.join(calculation.output_folder, "gneb_sp"), initial_chain_file=initial_chain_file)
+    gnw = gneb_workflow.GNEB_Node(name="gneb_sp", input_file=INPUT_FILE, output_folder = output_path_gneb, initial_chain_file=initial_chain_file)
     gnw.state_prepare_callback = state_prepare_cb
     gnw.setup_plot_callbacks()
-    gnw.n_iterations_step
-    gnw.n_iterations_check   = 1000
-    gnw.max_total_iterations = 20000
-    gnw.prepare_moving_endpoints()
+    gnw.update_energy_path()
     rx = gnw.current_energy_path.reaction_coordinate
-    gnw.delta_Rx_left  = (rx[1] - rx[0]) / 2
-    gnw.delta_Rx_right = (rx[2] - rx[1]) / 2
-    gnw.convergence = 1e-7
+    gnw.delta_Rx_left    = (rx[1] - rx[0]) / 2
+    gnw.delta_Rx_right   = (rx[2] - rx[1]) / 2
+    gnw.prepare_moving_endpoints()
+
+    gnw.n_iterations_check   = 5000
+    gnw.max_total_iterations = 40000
+    gnw.convergence          = 1e-6
     gnw.to_json()
+
+    # Run with VP solver
     gnw.run()
-    calculation.unlock()
+
+    # Run with LBFGS solver
+    # gnw.solver_gneb = simulation.SOLVER_LBFGS_OSO
+    # gnw.convergence = 1e-7
+    # gnw.max_total_iterations = 60000
+    # gnw.run()
+    # calculation.unlock()
 
 if __name__ == "__main__":
 
@@ -52,7 +69,38 @@ if __name__ == "__main__":
     import argparse, os
     parser = argparse.ArgumentParser()
     parser.add_argument("paths", type=str, nargs="+")
+    parser.add_argument('-MPI', action='store_true')
+
     args = parser.parse_args()
 
-    for f in args.paths:
-        main(f)
+    if not args.MPI:
+        for f in args.paths:
+            main(f)
+    else:
+        OUTPUT_SCRATCH = "/SCRATCH/saller"
+        OUTPUT_LOCAL   = "/local/th1/iff003/saller/"
+
+        ## for debugging:
+        # OUTPUT_SCRATCH = "./SCRATCH"
+        # OUTPUT_LOCAL   = "./LOCAL"
+
+        from mpi_loop import mpi_loop
+        import shutil, os
+        from datetime import datetime
+        now = datetime.now()
+
+        def callable(i):
+            input_path = args.paths[i]
+
+            calculation_name = os.path.basename(os.path.normpath(input_path))
+            # Identifier
+            identify = time = now.strftime("converge_sp#%m_%d_%Y_%H_%M_%S")
+
+            output_path = os.path.join(OUTPUT_SCRATCH, identify, calculation_name)
+
+            main(input_path, output_path)
+
+            print("Copy from SCRATCH to local")
+            shutil.copytree(os.path.join(OUTPUT_SCRATCH, identify, calculation_name), os.path.join(OUTPUT_LOCAL, identify, calculation_name))
+
+        mpi_loop(callable, len(args.paths))
