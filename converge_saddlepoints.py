@@ -42,13 +42,14 @@ def main(input_calculation_folder_path, output_calculation_folder_path=None):
     gnw.state_prepare_callback = state_prepare_cb
     gnw.setup_plot_callbacks()
     gnw.update_energy_path()
-    rx = gnw.current_energy_path.reaction_coordinate
-    gnw.delta_Rx_left    = (rx[1] - rx[0]) / 2
-    gnw.delta_Rx_right   = (rx[2] - rx[1]) / 2
+
     gnw.prepare_moving_endpoints()
+    rx = gnw.current_energy_path.reaction_coordinate
+    gnw.delta_Rx_left    = (rx[1] - rx[0])
+    gnw.delta_Rx_right   = (rx[2] - rx[1])
 
     gnw.n_iterations_check   = 5000
-    gnw.max_total_iterations = 40000
+    gnw.max_total_iterations = 100000
     gnw.convergence          = 1e-6
     gnw.to_json()
 
