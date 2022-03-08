@@ -49,7 +49,7 @@ def main(input_calculation_folder_path, output_calculation_folder_path=None):
     gnw.n_iterations_check     = 1000
     gnw.allow_split            = False
     gnw.setup_plot_callbacks()
-    gnw.convergence            = 1e-2
+    gnw.convergence            = 1e-3
     gnw.to_json()
     gnw.run()
 
