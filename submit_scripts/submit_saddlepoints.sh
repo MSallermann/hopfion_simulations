@@ -1,0 +1,1 @@
+sbatch -N2 --ntasks-per-node=4 --cpus-per-task=16 submit_scripts/converge_saddlepoints.sh -o "output.out.%j"
