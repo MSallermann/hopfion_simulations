@@ -23,13 +23,13 @@ def main(input_calculation_folder_path, output_calculation_folder_path=None):
     else:
         calculation_out = calculation
 
-    output_path_gneb = os.path.join(calculation_out.output_folder, "gneb_sp_new")
+    output_path_gneb = os.path.join(calculation_out.output_folder, "gneb_sp")
 
     if os.path.exists(output_path_gneb):
         print(f"Skipping because {output_path_gneb} already exists")
         return
 
-    initial_chain_file = calculation.to_abspath(os.path.join("gneb_preconverge", "chain.ovf"))
+    initial_chain_file = calculation.to_abspath(os.path.join("gneb_preconverge_e3", "chain.ovf"))
 
     # Write state prepare callback
     def state_prepare_cb(gnw, p_state):
@@ -41,31 +41,35 @@ def main(input_calculation_folder_path, output_calculation_folder_path=None):
     gnw = gneb_workflow.GNEB_Node(name="gneb_sp", input_file=INPUT_FILE, output_folder = output_path_gneb, initial_chain_file=initial_chain_file)
     gnw.state_prepare_callback = state_prepare_cb
     gnw.setup_plot_callbacks()
+
     gnw.update_energy_path()
+    epath = gnw.current_energy_path
+    idx_mid = np.min( np.argsort(epath.curvature())[:2] )
 
-    gnw.prepare_moving_endpoints()
+    gnw.prepare_moving_endpoints(idx_mid)
     gnw.allow_split = False
-    rx = gnw.current_energy_path.reaction_coordinate
-    gnw.delta_Rx_left    = 0.1 #(rx[1] - rx[0]) / 10
-    gnw.delta_Rx_right   = 0.1 #(rx[2] - rx[1]) / 10
 
-    gnw.n_iterations_check   = 5000
-    gnw.max_total_iterations = 1000000
-    gnw.convergence          = 1e-5
+    def half_and_run(convergence, solver):
+        gnw.update_energy_path()
+        rx = gnw.current_energy_path.reaction_coordinate
+        gnw.delta_Rx_left    = (rx[1] - rx[0]) / 2
+        gnw.delta_Rx_right   = (rx[2] - rx[1]) / 2
+        gnw.n_iterations_check   = 500
+        gnw.max_total_iterations = 1000000
+        gnw.convergence          = convergence
+        gnw.solver_gneb          = solver
+        gnw.log(f"Rx_left  = {gnw.delta_Rx_left}")
+        gnw.log(f"Rx_right = {gnw.delta_Rx_right}")
+        gnw.run()
+
     from spirit import simulation
-    gnw.solver_gneb = simulation.SOLVER_VP_OSO
-    gnw.to_json()
+    half_and_run(1e-3, simulation.SOLVER_VP_OSO)
+    half_and_run(1e-3/2.0, simulation.SOLVER_VP_OSO)
+    half_and_run(1e-3/4.0, simulation.SOLVER_VP_OSO)
+    half_and_run(1e-3/8.0, simulation.SOLVER_VP_OSO)
+    half_and_run(1e-6, simulation.SOLVER_LBFGS_OSO)
 
-    # Run with VP solver
-    gnw.log("Run with vp")
-    gnw.run()
-    gnw.log("Run with lbfgs")
-    # Run with LBFGS solver
-    gnw.solver_gneb = simulation.SOLVER_LBFGS_OSO
-    gnw.convergence = 1e-6
-    # gnw.max_total_iterations = 60000
-    gnw.run()
-    # calculation.unlock()
+
 
 if __name__ == "__main__":
 
