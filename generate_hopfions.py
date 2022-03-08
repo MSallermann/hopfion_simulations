@@ -16,7 +16,7 @@ SCRIPT_DIR         = os.path.dirname( os.path.abspath(__file__) )
 OUTPUT_BASE_FOLDER = os.path.join(SCRIPT_DIR, "gamma_l0_calculations")
 INPUT_FILE         = SCRIPT_DIR + "/input.cfg"
 
-def gamma_l0_to_name(gamma, l0): 
+def gamma_l0_to_name(gamma, l0):
     return "gamma_{:.3f}_l0_{:.3f}".format(gamma, l0)
 
 def main():
@@ -24,6 +24,7 @@ def main():
     l0_list    = np.array([1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0])[::-1]
 
     NOI = 32
+    N_CELLS = [64, 64, 64]
 
     # gamma_list = [i/7.0 for i in range(2)]
     # l0_list = np.array([1.0])
@@ -54,7 +55,6 @@ def main():
         J       = compute_abc.J_from_reduced(E0, l0, gamma).tolist()
         ABC     = compute_abc.ABC_from_reduced(E0, l0, gamma)
 
-        n_cells = [64, 64, 64]
 
         folder.descriptor = dict(
             gamma   = gamma,
@@ -62,13 +62,13 @@ def main():
             E0      = E0,
             J       = J,
             ABC     = ABC,
-            n_cells = n_cells,
+            n_cells = N_CELLS,
             initial_chain_file = "initial_chain.ovf"
         )
 
         def __state_prepare_cb(p_state):
             from spirit import geometry, configuration, hamiltonian
-            geometry.set_n_cells(p_state, n_cells)
+            geometry.set_n_cells(p_state, N_CELLS)
             configuration.domain(p_state, [0,0,1])
             hamiltonian.set_exchange(p_state, len(J), J)
 
