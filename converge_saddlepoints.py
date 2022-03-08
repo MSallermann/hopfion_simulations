@@ -44,7 +44,32 @@ def main(input_calculation_folder_path, output_calculation_folder_path=None):
 
     gnw.update_energy_path()
     epath = gnw.current_energy_path
-    idx_mid = np.min( np.argsort(epath.curvature())[:2] )
+
+    # Figure out idx_mid
+    # first compute the maximum of the *interpolated* energy
+    # then find the two images wich lie left and right to the interpolated maximum
+    # look at the interpolated curvature of the two images and choose the one with lower curvature
+
+    n_interpolated       = epath.n_interpolated()
+    idx_max_interpolated = np.argmax(epath.interpolated_total_energy)
+    Rx_max_interpolated  = epath.interpolated_reaction_coordinate[idx_max_interpolated]
+    gnw.log(f"Rx_max_interpolated = {Rx_max_interpolated}")
+
+    idx_mid_candidates = np.argsort( np.abs(np.array(np.array(epath.reaction_coordinate) - Rx_max_interpolated )) )[:2]
+    gnw.log(f"idx_mid_candidates = {idx_mid_candidates}")
+
+    gnw.log(idx_mid_candidates[0] * (n_interpolated + 1 ))
+
+    interpolated_curvature_0 = np.array(epath.interpolated_curvature())[ idx_mid_candidates[0] * (n_interpolated + 1 ) ]
+    interpolated_curvature_1 = np.array(epath.interpolated_curvature())[ idx_mid_candidates[1] * (n_interpolated + 1 ) ]
+
+    if interpolated_curvature_0 < interpolated_curvature_1:
+        idx_mid = idx_mid_candidates[0]
+    else:
+        idx_mid = idx_mid_candidates[1]
+
+    gnw.log(f"curvatures = [{interpolated_curvature_0}, {interpolated_curvature_1}]")
+    gnw.log(f"idx_mid = {idx_mid}")
 
     gnw.prepare_moving_endpoints(idx_mid)
     gnw.allow_split = False
@@ -52,9 +77,9 @@ def main(input_calculation_folder_path, output_calculation_folder_path=None):
     def half_and_run(convergence, solver):
         gnw.update_energy_path()
         rx = gnw.current_energy_path.reaction_coordinate
-        gnw.delta_Rx_left    = (rx[1] - rx[0]) / 2
-        gnw.delta_Rx_right   = (rx[2] - rx[1]) / 2
-        gnw.n_iterations_check   = 500
+        gnw.delta_Rx_left        = (rx[1] - rx[0]) / 2.0
+        gnw.delta_Rx_right       = (rx[2] - rx[1]) / 2.0
+        gnw.n_iterations_check   = 5000
         gnw.max_total_iterations = 1000000
         gnw.convergence          = convergence
         gnw.solver_gneb          = solver
