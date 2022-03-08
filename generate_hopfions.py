@@ -26,9 +26,26 @@ def main():
     NOI = 32
     N_CELLS = [64, 64, 64]
 
+    # N_CELLS = [32, 32, 32]
+
     # gamma_list = [i/7.0 for i in range(2)]
     # l0_list = np.array([1.0])
     gamma_l0_list = [[gamma, l0] for gamma in gamma_list for l0 in l0_list]
+
+    # Viable 32^3 hopfions
+    # gamma_l0_list = [
+    #     *[ [0.0/7.0, l0] for l0 in [1.5] ],
+    #     *[ [1.0/7.0, l0] for l0 in [1.5, 2.0, 2.5] ],
+    #     *[ [2.0/7.0, l0] for l0 in [2.0, 2.5] ],
+    #     *[ [3.0/7.0, l0] for l0 in [2.0, 2.5, 3.0] ],
+    #     *[ [4.0/7.0, l0] for l0 in [2.0, 2.5, 3.0, 3.5] ],
+    #     *[ [5.0/7.0, l0] for l0 in [2.0, 2.5, 3.0, 3.5, 4.0] ],
+    #     *[ [6.0/7.0, l0] for l0 in [2.5, 3.0, 3.5, 4.0]],
+    #     *[ [7.0/7.0, l0] for l0 in [3.5, 4.0] ],
+    # ]
+
+    # sort in descending l0 order
+    gamma_l0_list.sort(reverse=True, key = lambda x: x[1])
 
     for i, (gamma, l0) in enumerate(gamma_l0_list):
         print(f"gamma {gamma}, l0 {l0}")
@@ -41,20 +58,14 @@ def main():
                 continue
 
         input_image = None
-        if l0 != max(l0_list):
-            # try:
-            name_prev   = gamma_l0_to_name(gamma, l0_list[ np.argwhere(l0_list == l0 )[0,0] - 1 ] )
+        name_prev   = gamma_l0_to_name(gamma, l0 - 0.5 )
+        if os.path.exists(os.path.join(OUTPUT_BASE_FOLDER, name_prev)):
             folder_prev = calculation_folder(output_folder = os.path.join(OUTPUT_BASE_FOLDER, name_prev))
             input_image = os.path.join( folder_prev.output_folder, folder_prev.descriptor["initial_chain_file"] )
-            # except Exception as e:
-            #     input_image = None
-        #         # print(e)
-        # print(input_image)
 
         E0      = 0.025 # me
         J       = compute_abc.J_from_reduced(E0, l0, gamma).tolist()
         ABC     = compute_abc.ABC_from_reduced(E0, l0, gamma)
-
 
         folder.descriptor = dict(
             gamma   = gamma,
@@ -65,7 +76,6 @@ def main():
             n_cells = N_CELLS,
             initial_chain_file = "initial_chain.ovf"
         )
-
         def __state_prepare_cb(p_state):
             from spirit import geometry, configuration, hamiltonian
             geometry.set_n_cells(p_state, N_CELLS)
