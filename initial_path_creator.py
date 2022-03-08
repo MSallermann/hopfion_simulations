@@ -1,4 +1,4 @@
-from spirit_extras import import_spirit, util
+from spirit_extras import import_spirit, util, data
 
 def main(output_file, input_file, noi, background, radius, hopfion_normal, state_prepare_callback=None, input_image = None, shrinking_hopfion=False):
     from spirit import state, configuration, simulation, io, geometry, chain, transition
@@ -26,16 +26,19 @@ def main(output_file, input_file, noi, background, radius, hopfion_normal, state
 
         simulation.start(p_state, simulation.METHOD_LLG, simulation.SOLVER_LBFGS_OSO, idx_image=0)
 
-        configuration.domain(p_state, background, idx_image=noi-1)
-        simulation.start(p_state, simulation.METHOD_LLG, simulation.SOLVER_LBFGS_OSO, idx_image=noi-1)
+        if noi>1:
+            configuration.domain(p_state, background, idx_image=noi-1)
+            simulation.start(p_state, simulation.METHOD_LLG, simulation.SOLVER_LBFGS_OSO, idx_image=noi-1)
 
-        if shrinking_hopfion:
-            for i in range(1, noi-1):
-                configuration.hopfion(p_state, radius * (1-(i-1)/noi), idx_image=i)
-        else:
-            # transition.homogeneous(p_state, 0, noi-1)
-            transition.without_zero_modes(p_state, 0, noi-1)
-
+            if shrinking_hopfion:
+                for i in range(1, noi-1):
+                    configuration.hopfion(p_state, radius * (1-(i-1)/noi), idx_image=i)
+            else:
+                # transition.homogeneous(p_state, 0, noi-1)
+                transition.without_zero_modes(p_state, 0, noi-1)
+                chain.update_data(p_state)
+                epath = data.energy_path_from_p_state(p_state)
+                transition.homogeneous(p_state, epath.idx_sp(), noi-1 )
 
         io.chain_write(p_state, output_file)
 
