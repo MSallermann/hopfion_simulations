@@ -40,7 +40,7 @@ def main(output_file, input_file, noi, background, radius, hopfion_normal, state
                 epath = data.energy_path_from_p_state(p_state)
                 transition.homogeneous(p_state, epath.idx_sp(), noi-1 )
 
-        io.chain_write(p_state, output_file)
+        io.chain_write(p_state, output_file, fileformat = io.FILEFORMAT_OVF_BIN)
 
 if __name__ == "__main__":
     import argparse, os
