@@ -44,14 +44,12 @@ if __name__ == "__main__":
     import glob
     import argparse, os
     parser = argparse.ArgumentParser()
-    parser.add_argument('-i', dest="input_folder", type=str, nargs='?', help='The input folder')
-
+    parser.add_argument("paths", type=str, nargs="+")
     args = parser.parse_args()
 
-    files = glob.glob( args.input_folder)
-
     data  = [] # angle > 0
-    for f in files:
+    for f in args.paths:
+        print(f)
         calculation = calculation_folder.calculation_folder(f)
         data.append( [ calculation.descriptor["gamma"], calculation.descriptor["l0"], calculation.descriptor["max_angle_between_neighbours"]] )
 
