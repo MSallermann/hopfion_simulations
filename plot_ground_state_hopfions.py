@@ -1,11 +1,11 @@
-from spirit_extras import import_spirit
+from spirit_extras import import_spirit, post_processing
 import matplotlib.pyplot as plt
 import numpy as np
 import os
 import calculation_folder
 
 SCRIPT_DIR = os.path.dirname( os.path.abspath(__file__) )
-DELAUNAY_PATH = os.path.join(SCRIPT_DIR, "delaunay32.vtk")
+DELAUNAY_PATH = os.path.join(SCRIPT_DIR, "delaunay64.vtk")
 INPUT_FILE = SCRIPT_DIR + "/input.cfg"
 
 OUTPUT_FOLDER = os.path.join(SCRIPT_DIR, "plots")
@@ -19,9 +19,12 @@ def main(path):
     calculation = calculation_folder.calculation_folder(path)
     chain_file  = calculation.to_abspath( "initial_chain.ovf" )
 
-    gamma = calculation.descriptor["gamma"]
-    l0    = calculation.descriptor["l0"]
-    n_cells    = calculation.descriptor["n_cells"]
+    gamma   = calculation.descriptor["gamma"]
+    l0      = calculation.descriptor["l0"]
+    n_cells = calculation.descriptor["n_cells"]
+
+    if calculation.descriptor["max_angle_between_neighbours"] < 1e-2:
+        return
 
 
     plot_name  = f"initial_hopfion_gamma_{gamma:.3f}_r0_{l0:.3f}"
@@ -37,10 +40,6 @@ def main(path):
         # Create plotter
         plotter = pyvista_plotting.Spin_Plotter(system)
 
-        # plotter.camera_position = 'xy'
-        # plotter.camera_azimuth   = 45
-        # plotter.camera_elevation = 50
-
         if os.path.exists(DELAUNAY_PATH):
             plotter.load_delaunay(DELAUNAY_PATH)
         else:
@@ -49,8 +48,19 @@ def main(path):
 
         plotter.isosurface(0, "spins_z")
         # plotter.show(save_camera_file="camera.json")
-        plotter.camera_from_json("camera.json")
-        plotter.render_to_png(os.path.join(OUTPUT_FOLDER, plot_name) )
+
+        # Compute camera positions
+        distance = 100
+        center, normal = post_processing.hopfion_normal(p_state)
+
+        print(center, normal)
+
+        plotter.camera_position    = center + distance * normal
+        plotter.camera_focal_point = center
+        plotter.camera_up          = np.cross(normal, [1,0,0])
+
+        # plotter.camera_from_json("camera.json")
+        plotter.render_to_png( os.path.join(calculation.output_folder, plot_name) )
 
 if __name__ == "__main__":
 
