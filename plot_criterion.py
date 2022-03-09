@@ -36,6 +36,12 @@ def main(data):
     plt.plot( data[~mask_greater_than_zero,0], data[~mask_greater_than_zero,1], marker="X", markersize = 7, markeredgewidth = 1.0, mec = "black", markerfacecolor="lightsalmon", ls="None" )
     plt.xlabel(r"$\gamma$")
     plt.ylabel(r"$r_0~[a]$")
+
+    xtick_labels = [ f"{i}/7" for i in range(8)]
+    xtick_labels[0]  = "0"
+    xtick_labels[-1] = "1"
+    plt.gca().set_xticks( [ i/7.0 for i in range(8)] )
+    plt.gca().set_xticklabels( xtick_labels )
     plt.savefig("stability_criterion.png", dpi=300, bbox_inches="tight")
     plt.show()
 
