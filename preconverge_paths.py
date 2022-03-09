@@ -44,7 +44,7 @@ def main(input_calculation_folder_path, output_calculation_folder_path=None):
     # Settings for GNEB workflow
     gnw = gneb_workflow.GNEB_Node(name="gneb_preconverge", input_file = INPUT_FILE, output_folder = output_path_gneb, initial_chain_file = initial_chain_file)
     gnw.state_prepare_callback = state_prepare_cb
-    gnw.target_noi             = 32
+    gnw.target_noi             = 10
     gnw.max_total_iterations   = 50000
     gnw.n_iterations_check     = 1000
     gnw.allow_split            = False
