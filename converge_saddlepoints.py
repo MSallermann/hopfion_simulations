@@ -58,8 +58,6 @@ def main(input_calculation_folder_path, output_calculation_folder_path=None):
     idx_mid_candidates = np.argsort( np.abs(np.array(np.array(epath.reaction_coordinate) - Rx_max_interpolated )) )[:2]
     gnw.log(f"idx_mid_candidates = {idx_mid_candidates}")
 
-    gnw.log(idx_mid_candidates[0] * (n_interpolated + 1 ))
-
     interpolated_curvature_0 = np.array(epath.interpolated_curvature())[ idx_mid_candidates[0] * (n_interpolated + 1 ) ]
     interpolated_curvature_1 = np.array(epath.interpolated_curvature())[ idx_mid_candidates[1] * (n_interpolated + 1 ) ]
 
@@ -74,27 +72,33 @@ def main(input_calculation_folder_path, output_calculation_folder_path=None):
     gnw.prepare_moving_endpoints(idx_mid)
     gnw.allow_split = False
 
-    def half_and_run(convergence, solver):
+    def half_and_run(convergence, solver, factor = 2.0):
         gnw.update_energy_path()
         rx = gnw.current_energy_path.reaction_coordinate
-        gnw.delta_Rx_left        = (rx[1] - rx[0]) / 2.0
-        gnw.delta_Rx_right       = (rx[2] - rx[1]) / 2.0
+        gnw.delta_Rx_left        = (rx[1] - rx[0]) / factor
+        gnw.delta_Rx_right       = (rx[2] - rx[1]) / factor
         gnw.n_iterations_check   = 5000
-        gnw.max_total_iterations = 1000000
+        gnw.max_total_iterations += 10000
         gnw.convergence          = convergence
         gnw.solver_gneb          = solver
         gnw.log(f"Rx_left  = {gnw.delta_Rx_left}")
         gnw.log(f"Rx_right = {gnw.delta_Rx_right}")
         gnw.run()
+        return (gnw.delta_Rx_left + gnw.delta_Rx_right) / 2.0
 
     from spirit import simulation
-    half_and_run(1e-3, simulation.SOLVER_VP_OSO)
-    half_and_run(1e-3/2.0, simulation.SOLVER_VP_OSO)
-    half_and_run(1e-3/4.0, simulation.SOLVER_VP_OSO)
-    half_and_run(1e-3/8.0, simulation.SOLVER_VP_OSO)
-    half_and_run(1e-6, simulation.SOLVER_LBFGS_OSO)
 
+    convergence  = 1e-3
+    delta_Rx     = half_and_run(convergence, simulation.SOLVER_VP_OSO,  factor=1.5)
+    factor       = 2.0
 
+    # Relax with VP solver unitl delta_Rx is small
+    while delta_Rx > 0.2:
+        convergence = convergence/factor
+        delta_Rx    = half_and_run(convergence, simulation.SOLVER_VP_OSO, factor=factor)
+
+    # Relax the rest with LBFGS
+    half_and_run(1e-7, simulation.SOLVER_LBFGS_OSO, factor=factor)
 
 if __name__ == "__main__":
 
