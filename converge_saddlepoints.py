@@ -77,8 +77,8 @@ def main(input_calculation_folder_path, output_calculation_folder_path=None):
         rx = gnw.current_energy_path.reaction_coordinate
         gnw.delta_Rx_left        = (rx[1] - rx[0]) / factor
         gnw.delta_Rx_right       = (rx[2] - rx[1]) / factor
-        gnw.n_iterations_check   = 5000
-        gnw.max_total_iterations += 10000
+        gnw.n_iterations_check   =  5000
+        gnw.max_total_iterations += 20000
         gnw.convergence          = convergence
         gnw.solver_gneb          = solver
         gnw.log(f"Rx_left  = {gnw.delta_Rx_left}")
@@ -93,7 +93,7 @@ def main(input_calculation_folder_path, output_calculation_folder_path=None):
     factor       = 2.0
 
     # Relax with VP solver unitl delta_Rx is small
-    while delta_Rx > 0.2:
+    while delta_Rx > 0.1:
         convergence = convergence/factor
         delta_Rx    = half_and_run(convergence, simulation.SOLVER_VP_OSO, factor=factor)
 
