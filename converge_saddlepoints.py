@@ -89,19 +89,21 @@ def main(input_calculation_folder_path, output_calculation_folder_path=None):
     from spirit import simulation
 
     convergence  = 1e-3
-    delta_Rx     = half_and_run(convergence, simulation.SOLVER_VP_OSO,  factor=1.5)
     factor       = 2.0
+    delta_Rx    = half_and_run(convergence, simulation.SOLVER_VP_OSO, factor=factor)
 
-    # Relax with VP solver unitl delta_Rx is small
-    while delta_Rx > 0.1:
+    # Relax with VP solver until delta_Rx is small
+    while delta_Rx > 0.2:
         convergence = convergence/factor
         delta_Rx    = half_and_run(convergence, simulation.SOLVER_VP_OSO, factor=factor)
 
     # Before we relax with gneb, we back up the chain
-    gnw.backup_chain(gnw.output_folder, "chain_before_lbfgs.ovf")
+    gnw.backup_chain( os.path.join(gnw.output_folder, "chain_before_lbfgs.ovf") )
 
     # Relax the rest with LBFGS
     half_and_run(1e-7, simulation.SOLVER_LBFGS_OSO, factor=factor)
+
+    gnw.history_to_file( os.path.join(gnw.output_folder, "history.txt") )
 
 if __name__ == "__main__":
 
