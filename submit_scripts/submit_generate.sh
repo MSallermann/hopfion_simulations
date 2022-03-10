@@ -1,1 +1,1 @@
-sbatch -N1 --ntasks-per-node=1 --cpus-per-task=16 submit_scripts/generate_hopfions.sh -o "output.out.%j"
+sbatch -N1 --ntasks-per-node=1 --cpus-per-task=32 submit_scripts/generate_hopfions.sh -o "output.out.%j"

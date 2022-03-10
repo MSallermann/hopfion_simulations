@@ -29,7 +29,7 @@ def main(input_calculation_folder_path, output_calculation_folder_path=None):
         print(f"Skipping because {output_path_gneb} already exists")
         return
 
-    initial_chain_file = calculation.to_abspath(os.path.join("gneb_preconverge_e3", "chain.ovf"))
+    initial_chain_file = calculation.to_abspath(os.path.join("gneb_preconverge", "chain.ovf"))
 
     # Write state prepare callback
     def state_prepare_cb(gnw, p_state):
@@ -77,8 +77,8 @@ def main(input_calculation_folder_path, output_calculation_folder_path=None):
         rx = gnw.current_energy_path.reaction_coordinate
         gnw.delta_Rx_left        = (rx[1] - rx[0]) / factor
         gnw.delta_Rx_right       = (rx[2] - rx[1]) / factor
-        gnw.n_iterations_check   = 5000
-        gnw.max_total_iterations += 10000
+        gnw.n_iterations_check   =  5000
+        gnw.max_total_iterations += 20000
         gnw.convergence          = convergence
         gnw.solver_gneb          = solver
         gnw.log(f"Rx_left  = {gnw.delta_Rx_left}")
@@ -93,9 +93,12 @@ def main(input_calculation_folder_path, output_calculation_folder_path=None):
     factor       = 2.0
 
     # Relax with VP solver unitl delta_Rx is small
-    while delta_Rx > 0.2:
+    while delta_Rx > 0.1:
         convergence = convergence/factor
         delta_Rx    = half_and_run(convergence, simulation.SOLVER_VP_OSO, factor=factor)
+
+    # Before we relax with gneb, we back up the chain
+    gnw.backup_chain(gnw.output_folder, "chain_before_lbfgs.ovf")
 
     # Relax the rest with LBFGS
     half_and_run(1e-7, simulation.SOLVER_LBFGS_OSO, factor=factor)
@@ -129,16 +132,8 @@ if __name__ == "__main__":
 
         def callable(i):
             input_path = args.paths[i]
-
             calculation_name = os.path.basename(os.path.normpath(input_path))
             # Identifier
-            identify = time = now.strftime("converge_sp#%m_%d_%Y_%H_%M_%S")
-
-            output_path = os.path.join(OUTPUT_SCRATCH, identify, calculation_name)
-
-            main(input_path, output_path)
-
-            print("Copy from SCRATCH to local")
-            shutil.copytree(os.path.join(OUTPUT_SCRATCH, identify, calculation_name), os.path.join(OUTPUT_LOCAL, identify, calculation_name))
+            main(input_path, input_path)
 
         mpi_loop(callable, len(args.paths))
