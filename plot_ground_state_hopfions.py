@@ -14,6 +14,19 @@ if not os.path.exists(OUTPUT_FOLDER):
     os.makedirs(OUTPUT_FOLDER)
 # OUTPUT_FOLDER = os.path.join(SCRIPT_DIR, "plots")
 
+def annotate_params(path_to_png, gamma, r0, dpi=300):
+    import matplotlib.pyplot as plt
+    dpi = 300
+    img = plt.imread(path_to_png)
+    height, width, depth = img.shape
+    figsize = width / float(dpi), height / float(dpi)
+    fig = plt.figure(figsize=figsize)
+    ax = fig.add_axes([0, 0, 1, 1])
+    plt.text(0, 1, rf"$\gamma = {gamma:.2f}$  $r_0 = {r0:.2f}\,a$", fontsize = 18, bbox = dict(facecolor='white', edgecolor="white", alpha=0.80), horizontalalignment='left', verticalalignment='top', transform=ax.transAxes)
+    ax.axis('off')
+    ax.imshow(img)
+    fig.savefig(path_to_png, dpi=300, bbox_inches=0, pad_inches = 0)
+
 def main(path):
 
     calculation = calculation_folder.calculation_folder(path)
@@ -26,7 +39,6 @@ def main(path):
     if calculation.descriptor["max_angle_between_neighbours"] < 1e-2:
         return
 
-
     plot_name  = f"initial_hopfion_gamma_{gamma:.3f}_r0_{l0:.3f}"
 
     from spirit import state, io, geometry
@@ -34,7 +46,9 @@ def main(path):
 
     with state.State(INPUT_FILE) as p_state:
         geometry.set_n_cells(p_state, n_cells)
+
         io.image_read(p_state, chain_file, idx_image_infile=0, idx_image_inchain=0)
+
         system = data.spin_system_from_p_state(p_state)
 
         # Create plotter
@@ -50,7 +64,7 @@ def main(path):
         # plotter.show(save_camera_file="camera.json")
 
         # Compute camera positions
-        distance = 100
+        distance = 80
         center, normal = post_processing.hopfion_normal(p_state)
 
         print(center, normal)
@@ -60,18 +74,19 @@ def main(path):
         plotter.camera_up          = np.cross(normal, [1,0,0])
 
         # plotter.camera_from_json("camera.json")
-        plotter.render_to_png( os.path.join(calculation.output_folder, plot_name) )
+
+        plot_path = os.path.join(calculation.output_folder, plot_name)
+        plotter.render_to_png( plot_path )
+        annotate_params(plot_path + ".png", gamma = gamma, r0 = l0)
 
 if __name__ == "__main__":
 
-    spirit_info = import_spirit.find_and_insert("~/Coding/spirit_3img", stop_on_first_viable=True )[0]
+    spirit_info = import_spirit.find_and_insert("~/Coding/spirit_hopfion", stop_on_first_viable=True )[0]
 
     import argparse, os
     parser = argparse.ArgumentParser()
     parser.add_argument("paths", type=str, nargs="+")
     args = parser.parse_args()
-
-
 
     for f in args.paths:
         main(f)
