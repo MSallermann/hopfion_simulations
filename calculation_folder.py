@@ -3,7 +3,7 @@ import json, os
 class calculation_folder:
     """Represents one folder of a calculation. AKA one set of parameters for the Hopfion"""
 
-    def __init__(self, output_folder):
+    def __init__(self, output_folder, create=False):
         self.output_folder            = output_folder
         self._descriptor_file_name    = "params.json"
         self._initial_chain_file_name = "initial_chain.ovf"
@@ -12,7 +12,10 @@ class calculation_folder:
         self._lock_file = os.path.join(self.output_folder, "~lock")
 
         if not os.path.exists(self.output_folder):
-            os.makedirs(self.output_folder)
+            if not create:
+                raise Exception("Folder {} does not exist".format(self.output_folder))
+            else:
+                os.makedirs(self.output_folder)
 
         self.from_json()
 
