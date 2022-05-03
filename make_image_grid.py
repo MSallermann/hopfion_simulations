@@ -34,8 +34,6 @@ def main(paths):
                     share_all=True
                     )
 
-
-
     for a in grid:
         a.axis("off")
         a.axis("off")
@@ -55,6 +53,7 @@ def main(paths):
 import calculation_folder
 import glob
 import argparse, os
+
 parser = argparse.ArgumentParser()
 parser.add_argument("paths", type=str, nargs="+")
 args = parser.parse_args()

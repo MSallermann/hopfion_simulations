@@ -7,8 +7,8 @@ import os
 
 
 def main(path):
-    from spirit import state, geometry, chain, simulation, io
-
+    from spirit import state, geometry, chain, simulation, io, configuration
+    print(path)
     calculation = calculation_folder.calculation_folder(path)
     params = calculation.descriptor
 
@@ -23,15 +23,16 @@ def main(path):
 
     with state.State("input.cfg", quiet=True) as p_state:
         state_prepare_cb(p_state)
-        chain.set_length(p_state, 2)
+        chain.set_length(p_state, 3)
 
         io.image_read(p_state, os.path.join(path, params["initial_chain_file"]), idx_image_infile=0,  idx_image_inchain=0)
-        io.image_read(p_state, os.path.join(path, "gneb_sp3", "chain.ovf"),      idx_image_infile=1,  idx_image_inchain=1)
+        configuration.plus_z(p_state, idx_image=2)
         chain.update_data(p_state)
 
         epath = data.energy_path_from_p_state(p_state)
 
         calculation.descriptor["energy_barrier"] = epath.barrier()
+        calculation.descriptor["energy_barrier_divided_by_E0"] = epath.barrier() / (epath.total_energy[0] - epath.total_energy[2])
 
     calculation.to_json()
 
