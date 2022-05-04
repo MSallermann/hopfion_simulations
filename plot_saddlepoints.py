@@ -1,4 +1,4 @@
-from spirit_extras import import_spirit, post_processing
+from spirit_extras import import_spirit, post_processing, plotting
 import matplotlib.pyplot as plt
 import numpy as np
 import os
@@ -12,24 +12,13 @@ OUTPUT_FOLDER = os.path.join(SCRIPT_DIR, "plots")
 
 if not os.path.exists(OUTPUT_FOLDER):
     os.makedirs(OUTPUT_FOLDER)
-# OUTPUT_FOLDER = os.path.join(SCRIPT_DIR, "plots")
 
-from plot_util import annotate_params
+import plot_util
 
 def main(path):
     print(path)
 
     calculation = calculation_folder.calculation_folder(path)
-
-    chain_file = os.path.join(path, "gneb_sp", "chain.ovf")
-
-    try:
-        history = np.loadtxt(os.path.join(calculation.output_folder, "gneb_sp", "history.txt"))
-        if history[-1,1] > 1e-7:
-            chain_file = os.path.join(path, "gneb_sp", "chain_before_lbfgs.ovf")
-    except:
-        pass
-
     gamma   = calculation.descriptor["gamma"]
     l0      = calculation.descriptor["l0"]
     n_cells = calculation.descriptor["n_cells"]
@@ -37,52 +26,35 @@ def main(path):
     if calculation.descriptor["max_angle_between_neighbours"] < 1e-2:
         return
 
+    chain_file = os.path.join(path, "gneb_sp", "chain.ovf")
+    try:
+        history = np.loadtxt(os.path.join(calculation.output_folder, "gneb_sp", "history.txt"))
+        if history[-1,1] > 1e-7:
+            chain_file = os.path.join(path, "gneb_sp", "chain_before_lbfgs.ovf")
+    except:
+        pass
+
     plot_name  = f"saddlepoint_gamma_{gamma:.3f}_r0_{l0:.3f}"
+    plot_path = os.path.join(calculation.output_folder, plot_name)
 
-    from spirit import state, io, geometry
-    from spirit_extras import data, pyvista_plotting
+    plotter = plot_util.get_pyvista_plotter(chain_file, n_cells, idx_image_infile=1)
 
-    with state.State(INPUT_FILE) as p_state:
-        geometry.set_n_cells(p_state, n_cells)
-        io.image_read(p_state, chain_file, idx_image_infile=1, idx_image_inchain=0)
-        system = data.spin_system_from_p_state(p_state)
+    # plot_util.add_preimages(plotter)
+    plotter.isosurface(0.0, "spins_z")
+    # plotter.isosurface(0.9, "spins_x")
+    # plotter.show( )
 
-        # Create plotter
-        plotter = pyvista_plotting.Spin_Plotter(system)
-
-        if os.path.exists(DELAUNAY_PATH):
-            plotter.load_delaunay(DELAUNAY_PATH)
-        else:
-            plotter.compute_delaunay()
-            plotter.save_delaunay(DELAUNAY_PATH)
-
-        plotter.isosurface(0, "spins_z")
-        # plotter.show(save_camera_file="camera.json")
-
-        # Compute camera positions
-        distance = 80
-        center, normal = post_processing.hopfion_normal(system)
-
-        print(center, normal)
-
-        plotter.camera_position    = center + distance * normal
-        plotter.camera_focal_point = center
-        plotter.camera_up          = np.cross(normal, [1,0,0])
-
-        plot_path = os.path.join(calculation.output_folder, plot_name)
-        plotter.render_to_png( plot_path )
-        annotate_params(plot_path + ".png", gamma = gamma, r0 = l0)
+    plotter.render_to_png( plot_path )
+    plot_util.annotate_params(plot_path + ".png", gamma = gamma, r0 = l0)
 
 if __name__ == "__main__":
 
-    spirit_info = import_spirit.find_and_insert("~/Coding/spirit_hopfion", stop_on_first_viable=True )[0]
+    spirit_info = import_spirit.find_and_insert("~/Coding/spirit_hopfion", stop_on_first_viable=True)[0]
 
     import argparse, os
     parser = argparse.ArgumentParser()
     parser.add_argument("paths", type=str, nargs="+")
     args = parser.parse_args()
-
-
 
     for f in args.paths:
         main(f)

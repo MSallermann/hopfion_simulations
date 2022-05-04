@@ -10,3 +10,45 @@ def annotate_params(path_to_png, gamma, r0, dpi=300):
     ax.axis('off')
     ax.imshow(img)
     fig.savefig(path_to_png, dpi=300, bbox_inches=0, pad_inches = 0)
+
+def get_pyvista_plotter(chain_file, n_cells, idx_image_infile, DELAUNAY_PATH="delaunay64.vtk", INPUT_FILE="input.cfg"):
+    import os
+    from spirit_extras import import_spirit, post_processing, plotting
+    import numpy as np
+    from spirit import state, io, geometry
+    from spirit_extras import data, pyvista_plotting
+
+    plotter = None
+    system = None
+    with state.State(INPUT_FILE, quiet=True) as p_state:
+        geometry.set_n_cells(p_state, n_cells)
+        io.image_read(p_state, chain_file, idx_image_infile=idx_image_infile, idx_image_inchain=0)
+        system = data.spin_system_from_p_state(p_state, copy=True)
+
+        # Create plotter
+        plotter = pyvista_plotting.Spin_Plotter(system)
+
+        if os.path.exists(DELAUNAY_PATH):
+            plotter.load_delaunay(DELAUNAY_PATH)
+        else:
+            plotter.compute_delaunay()
+            plotter.save_delaunay(DELAUNAY_PATH)
+
+        # Compute camera positions
+        distance = 80
+        center, normal = post_processing.hopfion_normal(system)
+
+        plotter.camera_position    = center + distance * normal
+        plotter.camera_focal_point = center
+        plotter.camera_up          = np.cross(normal, [1,0,0])
+
+    return plotter
+
+def add_preimages(plotter, N=16, sz=0.2):
+    from spirit_extras import import_spirit, post_processing, plotting
+    import numpy as np
+    for i in range(N):
+        phi = 2 * np.pi / N * i
+        spin = [np.sin(phi),np.cos(phi),sz]
+        colors = plotting.get_rgba_colors( [spin] )
+        plotter.add_preimage(spin, tol=0.15, n_neighbours=24, render_args={"color" : colors[0][:3]})
