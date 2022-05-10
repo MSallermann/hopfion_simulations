@@ -23,13 +23,12 @@ def main(input_calculation_folder_path, output_calculation_folder_path=None):
     else:
         calculation_out = calculation
 
-    output_path_gneb = os.path.join(calculation_out.output_folder, "gneb_sp_dimer_test3")
+    initial_chain_file = calculation.to_abspath(calculation.descriptor["preconverged_chain_file"])
+    output_path_gneb   = os.path.join(calculation_out.output_folder, "gneb_sp_dimer2")
 
     if os.path.exists(output_path_gneb):
         print(f"Skipping because {output_path_gneb} already exists")
         return
-
-    initial_chain_file = calculation.to_abspath(os.path.join("gneb_sp_dimer_test2", "chain.ovf"))
 
     # Write state prepare callback
     def state_prepare_cb(gnw, p_state):
@@ -46,7 +45,6 @@ def main(input_calculation_folder_path, output_calculation_folder_path=None):
     epath = gnw.current_energy_path
 
     # Figure out idx_mid
-
     n_interpolated       = epath.n_interpolated()
     idx_max_interpolated = np.argmax(epath.interpolated_total_energy)
     Rx_max_interpolated  = epath.interpolated_reaction_coordinate[idx_max_interpolated]
@@ -64,9 +62,8 @@ def main(input_calculation_folder_path, output_calculation_folder_path=None):
     gnw.delta_Rx_left        = 1.0
     gnw.delta_Rx_right       = 1.0
     gnw.convergence          = 1e-5
-    gnw.max_total_iterations = 20000
+    gnw.max_total_iterations = 40000
     gnw.run()
-
 
     from spirit import simulation
     # Final convergence with lbfgs
@@ -89,6 +86,8 @@ def main(input_calculation_folder_path, output_calculation_folder_path=None):
 
     gnw.history_to_file( os.path.join(gnw.output_folder, "history.txt") )
 
+    calculation.descriptor["saddlepoint_chain_file"] = calculation.to_relpath(output_path_gneb)
+    calculation.to_json()
 
 if __name__ == "__main__":
 

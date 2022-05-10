@@ -34,11 +34,11 @@ def main(output_file, input_file, noi, background, radius, hopfion_normal, state
                 for i in range(1, noi-1):
                     configuration.hopfion(p_state, radius * (1-(i-1)/noi), idx_image=i)
             else:
-                # transition.homogeneous(p_state, 0, noi-1)
-                transition.without_zero_modes(p_state, 0, noi-1)
-                chain.update_data(p_state)
-                epath = data.energy_path_from_p_state(p_state)
-                transition.homogeneous(p_state, epath.idx_sp(), noi-1 )
+                transition.homogeneous(p_state, 0, noi-1)
+                # transition.without_zero_modes(p_state, 0, noi-1)
+                # chain.update_data(p_state)
+                # epath = data.energy_path_from_p_state(p_state)
+                # transition.homogeneous(p_state, epath.idx_sp(), noi-1 )
 
         io.chain_write(p_state, output_file, fileformat = io.FILEFORMAT_OVF_BIN)
 
