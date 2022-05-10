@@ -57,6 +57,9 @@ class calculation_folder:
     def to_abspath(self, relative_path):
         return os.path.join(self.output_folder, relative_path)
 
+    def to_relpath(self, absolute_path):
+        return os.path.relpath(absolute_path, self.output_folder)
+
     def to_json(self):
         with open(self.get_descriptor_file_path(), "w") as f:
             f.write(json.dumps(self.descriptor, indent=4))
