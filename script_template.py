@@ -30,10 +30,10 @@ if __name__ == "__main__":
 
     import argparse, os
     parser = argparse.ArgumentParser()
-    parser.add_argument("paths", type=str, nargs="+")
-    parser.add_argument("-i",   help = "Input path, relative to calculation folder" , required=True, type=str)
-    parser.add_argument("-o",   help = "Output path, relative to calculation folder", required=True, type=str)
-    parser.add_argument('-MPI', action='store_true')
+    parser.add_argument("paths", help = "calculation folders, which need to exist at the specified location", type=str, nargs="+")
+    parser.add_argument("-i",    help = "input path, relative to calculation folder" , required=True, type=str)
+    parser.add_argument("-o",    help = "output path, relative to calculation folder", required=True, type=str)
+    parser.add_argument('-MPI',  help = "speed up loop over folders with MPI (useful when wildcards are used to specify multiple calculation folders)", action='store_true')
 
     args = parser.parse_args()
 
