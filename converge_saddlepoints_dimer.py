@@ -1,34 +1,19 @@
-from spirit_extras import import_spirit, gneb_workflow
-import matplotlib.pyplot as plt
-import numpy as np
+from spirit_extras import import_spirit
+
 import os
 import calculation_folder
 
 SCRIPT_DIR = os.path.dirname( os.path.abspath(__file__) )
 INPUT_FILE = SCRIPT_DIR + "/input.cfg"
 
-def main(input_calculation_folder_path, output_calculation_folder_path=None):
-    # Read calculation folder from input path
-    calculation = calculation_folder.calculation_folder(input_calculation_folder_path)
+def main(calculation_folder_path, relative_input_path, relative_output_path):
+    # Read calculation folder from input path, and get the absolute input and output paths
+    calculation          = calculation_folder.calculation_folder(calculation_folder_path)
+    absolute_input_path  = calculation.to_abspath(relative_input_path)
+    absolute_output_path = calculation.to_abspath(relative_output_path)
 
-    # If no output calculation folder is give we assume it is the same as the input
-    if output_calculation_folder_path is None:
-        output_calculation_folder_path = input_calculation_folder_path
-
-    if input_calculation_folder_path != output_calculation_folder_path:
-        # Create new calculation folder at output path
-        calculation_out = calculation_folder.calculation_folder(output_calculation_folder_path)
-        calculation_out.descriptor = calculation.descriptor.copy()
-        calculation_out.to_json()
-    else:
-        calculation_out = calculation
-
-    initial_chain_file = calculation.to_abspath(calculation.descriptor["preconverged_chain_file"])
-    output_path_gneb   = os.path.join(calculation_out.output_folder, "gneb_sp_dimer2")
-
-    if os.path.exists(output_path_gneb):
-        print(f"Skipping because {output_path_gneb} already exists")
-        return
+    print(f"Input:   {absolute_input_path}")
+    print(f"Output:  {absolute_output_path}")
 
     # Write state prepare callback
     def state_prepare_cb(gnw, p_state):
@@ -37,7 +22,15 @@ def main(input_calculation_folder_path, output_calculation_folder_path=None):
         configuration.domain(p_state, [0,0,1])
         hamiltonian.set_exchange(p_state, len(calculation.descriptor["J"]), calculation.descriptor["J"])
 
-    gnw = gneb_workflow.GNEB_Node(name="gneb_sp", input_file=INPUT_FILE, output_folder = output_path_gneb, initial_chain_file=initial_chain_file)
+    # DO STUFF HERE
+    from spirit_extras import gneb_workflow
+    import numpy as np
+
+    if os.path.exists(absolute_output_path):
+        print(f"Skipping because {absolute_output_path} already exists")
+        return
+
+    gnw = gneb_workflow.GNEB_Node(name = "gneb_sp", input_file=INPUT_FILE, output_folder = absolute_output_path, initial_chain_file = absolute_input_path)
     gnw.state_prepare_callback = state_prepare_cb
     gnw.setup_plot_callbacks()
 
@@ -85,34 +78,31 @@ def main(input_calculation_folder_path, output_calculation_folder_path=None):
     gnw.run()
 
     gnw.history_to_file( os.path.join(gnw.output_folder, "history.txt") )
-
     calculation.descriptor["saddlepoint_chain_file"] = calculation.to_relpath(output_path_gneb)
+    #END DO STUFF
+
     calculation.to_json()
 
 if __name__ == "__main__":
-
     spirit_info = import_spirit.find_and_insert("~/Coding/spirit_hopfion", stop_on_first_viable=True )[0]
 
     import argparse, os
     parser = argparse.ArgumentParser()
     parser.add_argument("paths", type=str, nargs="+")
+    parser.add_argument("-i",   help = "Input path, relative to calculation folder" , required=True, type=str)
+    parser.add_argument("-o",   help = "Output path, relative to calculation folder", required=True, type=str)
     parser.add_argument('-MPI', action='store_true')
 
     args = parser.parse_args()
 
     if not args.MPI:
         for f in args.paths:
-            main(f)
+            main(f, args.i, args.o)
     else:
         from mpi_loop import mpi_loop
-        import shutil, os
-        from datetime import datetime
-        now = datetime.now()
 
         def callable(i):
             input_path = args.paths[i]
-            calculation_name = os.path.basename(os.path.normpath(input_path))
-            # Identifier
-            main(input_path, input_path)
+            main(input_path, args.i, args.o)
 
         mpi_loop(callable, len(args.paths))
