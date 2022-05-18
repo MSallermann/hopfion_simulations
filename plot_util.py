@@ -44,6 +44,26 @@ def get_pyvista_plotter(chain_file, n_cells, idx_image_infile, DELAUNAY_PATH="de
 
     return plotter, center, normal
 
+def set_view(plotter, hopfion_center, hopfion_normal, distance = 80, view="hopfion_normal"):
+    import numpy as np
+    if view.lower() == "hopfion_normal":
+        plotter.camera_position    = hopfion_center + distance * hopfion_normal
+        plotter.camera_focal_point = hopfion_center
+        plotter.camera_up          = np.cross(hopfion_normal, [1,0,0])
+    elif view.lower() == "hopfion_inplane":
+        plane_normal = np.cross(hopfion_normal, [1,0,0])
+        plane_normal /= np.linalg.norm(plane_normal)
+        plotter.camera_position = hopfion_center + distance * plane_normal
+        plotter.camera_up = hopfion_normal
+    elif view.lower() == "hopfion_diagonal":
+        plane_normal = np.cross(hopfion_normal, [1,0,0])
+        diagonal_normal = plane_normal + hopfion_normal
+        diagonal_normal /= np.linalg.norm(diagonal_normal)
+        plotter.camera_position = hopfion_center + distance * diagonal_normal
+        plotter.camera_up = hopfion_normal
+    else:
+        raise Exception(f"Unknown mode {view}")
+
 def add_preimages(plotter, N=16, sz=0.2):
     from spirit_extras import import_spirit, post_processing, plotting
     import numpy as np
