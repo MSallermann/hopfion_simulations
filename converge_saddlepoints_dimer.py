@@ -38,16 +38,21 @@ def main(calculation_folder_path, relative_input_path, relative_output_path):
     epath = gnw.current_energy_path
 
     # Figure out idx_mid
-    n_interpolated       = epath.n_interpolated()
-    idx_max_interpolated = np.argmax(epath.interpolated_total_energy)
-    Rx_max_interpolated  = epath.interpolated_reaction_coordinate[idx_max_interpolated]
-    gnw.log(f"Rx_max_interpolated = {Rx_max_interpolated}")
 
-    idx_mid_candidates = np.sort( np.argsort( np.abs(np.array(np.array(epath.reaction_coordinate) - Rx_max_interpolated )) )[:2] )
-    gnw.log(f"idx_mid_candidates = {idx_mid_candidates}")
+    if epath.noi() == 3: # cheeky shortcut
+        gnw.log("Using index 0 and 2 for dimer, since we have three images")
+        gnw.prepare_dimer(0,2)
+    else:
+        n_interpolated       = epath.n_interpolated()
+        idx_max_interpolated = np.argmax(epath.interpolated_total_energy)
+        Rx_max_interpolated  = epath.interpolated_reaction_coordinate[idx_max_interpolated]
+        gnw.log(f"Rx_max_interpolated = {Rx_max_interpolated}")
 
-    # Set up the gneb dimer
-    gnw.prepare_dimer(idx_mid_candidates[0])
+        idx_mid_candidates = np.sort( np.argsort( np.abs(np.array(np.array(epath.reaction_coordinate) - Rx_max_interpolated )) )[:2] )
+        gnw.log(f"idx_mid_candidates = {idx_mid_candidates}")
+
+        # Set up the gneb dimer
+        gnw.prepare_dimer(idx_mid_candidates[0])
 
     gnw.allow_split          = False
 
