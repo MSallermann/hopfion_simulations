@@ -10,7 +10,7 @@ def main(calculation_folder_path, relative_input_path, relative_output_path, INP
     # Read calculation folder from input path, and get the absolute input and output paths
     calculation          = calculation_folder.calculation_folder(calculation_folder_path)
 
-    if not INPUT_FROM_PREVIOUS
+    if not INPUT_FROM_PREVIOUS:
         absolute_input_path  = calculation.to_abspath(relative_input_path)
     else:
         # Try to read from a previous calculation
