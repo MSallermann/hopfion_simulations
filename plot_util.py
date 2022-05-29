@@ -1,15 +1,21 @@
-def annotate_params(path_to_png, gamma, r0, dpi=300, fontsize=15):
+
+
+def annotate_text(path_to_png, text, dpi=300, fontsize=15, alpha=1.0, background="white"):
+    import matplotlib
     import matplotlib.pyplot as plt
-    dpi = 300
+    matplotlib.rcParams["mathtext.fontset"] = "dejavuserif" #'dejavusans' (default),
     img = plt.imread(path_to_png)
     height, width, depth = img.shape
     figsize = width / float(dpi), height / float(dpi)
     fig = plt.figure(figsize=figsize)
     ax = fig.add_axes([0, 0, 1, 1])
-    plt.text(0, 1, rf"$\gamma = {gamma:.2f}$  $r_0 = {r0:.2f}\,a$", fontsize = fontsize, bbox = dict(facecolor='white', edgecolor="white", alpha=0.80), horizontalalignment='left', verticalalignment='top', transform=ax.transAxes)
+    plt.text(0, 1, text, fontsize = fontsize, bbox = dict(facecolor=background, edgecolor="None", alpha=alpha), horizontalalignment='left', verticalalignment='top', transform=ax.transAxes)
     ax.axis('off')
     ax.imshow(img)
-    fig.savefig(path_to_png, dpi=300, bbox_inches=0, pad_inches = 0)
+    fig.savefig(path_to_png, dpi=300, bbox_inches=0, pad_inches=0, transparent=True)
+
+def annotate_params(path_to_png, gamma, r0, dpi=300, fontsize=15, alpha=1.0, background="white"):
+    annotate_text(path_to_png,  rf"$\gamma = {gamma:.2f}$  $r_0 = {r0:.2f}\,a$", dpi, fontsize, alpha, background)
 
 def get_pyvista_plotter(chain_file, n_cells, idx_image_infile, DELAUNAY_PATH="delaunay64.vtk", INPUT_FILE="input.cfg"):
     import os
