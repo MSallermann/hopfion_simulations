@@ -8,9 +8,9 @@ def main(paths):
     for path in paths:
         print(path)
         calculation = calculation_folder.calculation_folder(path)
-        gamma = calculation.descriptor["gamma"]
-        l0    = calculation.descriptor["l0"]
-        path_image = glob.glob(os.path.join(path, "saddlepoint*.png"))
+        gamma       = calculation.descriptor["gamma"]
+        l0          = calculation.descriptor["l0"]
+        path_image  = glob.glob(os.path.join(path, "sp*.png"))
 
         if len(path_image) < 1:
             continue
@@ -36,14 +36,13 @@ def main(paths):
 
     for a in grid:
         a.axis("off")
-        a.axis("off")
 
     for d in data_list:
-        row = len(l0_list)-1 - np.where(l0_list == d[1] )[0][0]
-        col = np.where(gamma_list == d[0] )[0][0]
+        row      = len(l0_list)-1 - np.where(l0_list == d[1] )[0][0]
+        col      = np.where(gamma_list == d[0] )[0][0]
         idx_grid = row * len(gamma_list) + col
-        image = plt.imread(d[2])
-        ax = grid[idx_grid]
+        image    = plt.imread(d[2])
+        ax       = grid[idx_grid]
         ax.imshow(image)
         plt.gca().axis('off')
 
