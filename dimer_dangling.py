@@ -6,19 +6,19 @@ import numpy as np
 
 
 INPUT_FILE = "input.cfg"
-quiet = False
+quiet      = True
 
-def main(calculation_folder_path, path_to_dimer=None, output_chain_forward=None, output_chain_backward=None, delta_Rx=1, convergence_energy=1, min_iter=10, max_iter=-1, forward=True, backward=True, absolute_paths=False, relax_ends=False):
+def main(calculation_folder_path, path_to_dimer=None, output_chain=None, delta_Rx=1, convergence_energy=1, min_iter=10, max_iter=-1, forward=True, backward=True, absolute_paths=False, relax_ends=False, prefix=""):
 
     calculation = calculation_folder.calculation_folder(calculation_folder_path)
-    path_to_dimer = calculation.to_abspath(path_to_dimer)
 
     if path_to_dimer is None:
         path_to_dimer = calculation.to_abspath( calculation.descriptor["saddlepoint_chain_file"] )
+    else: 
+        path_to_dimer = calculation.to_abspath(path_to_dimer)
 
     if not absolute_paths:
-        output_chain_forward  = calculation.to_abspath(output_chain_forward)
-        output_chain_backward = calculation.to_abspath(output_chain_backward)
+        output_chain  = calculation.to_abspath(output_chain)
 
     # Write state prepare callback
     def state_prepare_cb(p_state):
@@ -40,9 +40,14 @@ def main(calculation_folder_path, path_to_dimer=None, output_chain_forward=None,
 
     import matplotlib.pyplot as plt
 
-    energies_forward  = []
-    energies_backward = []
+    if os.path.exists(output_chain):
+        os.remove(output_chain)
 
+    OUTPUT_DIR = os.path.dirname(output_chain)
+    if not os.path.exists(OUTPUT_DIR):
+        os.makedirs(OUTPUT_DIR)
+
+    # helper functions
     def read_dimer(p_state):
         noi_file = io.n_images_in_file(p_state, path_to_dimer)
         chain.set_length(p_state, 2)
@@ -51,21 +56,60 @@ def main(calculation_folder_path, path_to_dimer=None, output_chain_forward=None,
         io.image_read(p_state, path_to_dimer, idx_image_infile=noi_file-2, idx_image_inchain=0)
         io.image_read(p_state, path_to_dimer, idx_image_infile=noi_file-1, idx_image_inchain=1)
 
+    noi_bf = [0,0] # noi backward and noi forward
+    def append(p_state, idx_image, noi):
+        if not output_chain is None:
+            io.image_append(p_state, output_chain, idx_image=idx_image)
+            noi[idx_image] += 1
+
     with state.State(INPUT_FILE, quiet) as p_state:
         state_prepare_cb(p_state)
         read_dimer(p_state)
         NOISE_SCALE = 1e-4
+
+        if backward:
+            print("Backward chain")
+            read_dimer(p_state)
+            # In the backward chain we include image 0 of the dimer
+            append(p_state, 0, noi_bf)
+
+            parameters.gneb.set_moving_endpoints(p_state, True, fix_left=False, fix_right=True)
+            parameters.gneb.set_equilibrium_delta_Rx(p_state, delta_Rx, delta_Rx)
+
+            converged = False
+            iteration = 0
+
+            while not converged:
+                transition.dimer_shift(p_state, True)
+                configuration.add_noise(p_state, NOISE_SCALE, idx_image=0)
+
+                simulation.start(p_state, simulation.METHOD_GNEB, simulation.SOLVER_LBFGS_OSO)
+                energies = chain.get_energy(p_state)
+                delta_E = energies[-1] - energies[0]
+
+                print(f"delta_E = {delta_E:.5f}, |delta_E| > {convergence_energy*delta_Rx:.5f}")
+                append(p_state, 0, noi_bf)
+
+                iteration += 1
+                if iteration >= min_iter:
+                    converged = abs(delta_E) < convergence_energy*delta_Rx
+                    if max_iter > 0 and iteration >= max_iter:
+                        break
+
+            if relax_ends:
+                print("Relaxing endpoint")
+                configuration.add_noise(p_state, NOISE_SCALE, idx_image=1)
+                simulation.start(p_state, simulation.METHOD_LLG, simulation.SOLVER_LBFGS_OSO, idx_image=0)
+                append(p_state, 0, noi_bf)
+               
         if forward:
             print("Forward chain")
-            if os.path.exists(output_chain_forward):
-                os.remove(output_chain_forward)
+            read_dimer(p_state)
 
             # Push dimer from saddle point to final state
             parameters.gneb.set_moving_endpoints(p_state, True, fix_left=True, fix_right=False)
             parameters.gneb.set_equilibrium_delta_Rx(p_state, delta_Rx, delta_Rx)
             parameters.gneb.set_convergence(p_state, 1e-6)
-
-            delta_energy_forward = []
 
             converged = False
             iteration = 0
@@ -74,13 +118,10 @@ def main(calculation_folder_path, path_to_dimer=None, output_chain_forward=None,
                 energies = chain.get_energy(p_state)
 
                 delta_E = energies[-1] - energies[0]
-                delta_energy_forward.append(delta_E)
 
-                print(delta_E)
-                print(convergence_energy*delta_Rx)
-
-                if not output_chain_forward is None:
-                    io.image_append(p_state, output_chain_forward, idx_image=1)
+                print(f"delta_E = {delta_E:.5f}, |delta_E| > {convergence_energy*delta_Rx:.5f}")
+                append(p_state, 1, noi_bf)
+               
                 transition.dimer_shift(p_state, False)
                 configuration.add_noise(p_state, NOISE_SCALE, idx_image=1)
 
@@ -89,60 +130,35 @@ def main(calculation_folder_path, path_to_dimer=None, output_chain_forward=None,
                     converged = abs(energies[-1] - energies[0]) < convergence_energy*delta_Rx
                     if max_iter > 0 and iteration >= max_iter:
                         break
-                np.savetxt("delta_energy_forward.txt", delta_energy_forward)
 
             if relax_ends:
+                print("Relaxing endpoint")
                 configuration.add_noise(p_state, NOISE_SCALE, idx_image=1)
                 simulation.start(p_state, simulation.METHOD_LLG, simulation.SOLVER_LBFGS_OSO, idx_image=1)
-                if not output_chain_forward is None:
-                    io.image_append(p_state, output_chain_forward, idx_image=1)
+                append(p_state, 1, noi_bf)
 
-        if backward:
-            print("Backward chain")
-            if os.path.exists(output_chain_backward):
-                os.remove(output_chain_backward)
+        # Combine chains
+        print("Combining chains")
+        from spirit_extras import chain_io, data, plotting
 
-            # Read dimer back in
-            read_dimer(p_state)
-            # In the backward chain we include image 0 of the dimer
-            io.image_append(p_state, output_chain_backward, idx_image=0)
+        chain.set_length(p_state, 1)
+        io.chain_read(p_state, output_chain)
+        print(f"noi_backward = {noi_bf[0]}, noi_forward = {noi_bf[1]}")
 
-            parameters.gneb.set_moving_endpoints(p_state, True, fix_left=False, fix_right=True)
-            parameters.gneb.set_equilibrium_delta_Rx(p_state, delta_Rx, delta_Rx)
+        print("Inverting backward chain")
+        chain_io.invert_chain(p_state, 0, noi_bf[0] - 1)
+        io.chain_write(p_state, output_chain)
 
-            converged = False
-            iteration = 0
+        simulation.start(p_state, simulation.METHOD_GNEB, simulation.SOLVER_VP, n_iterations=1)
+        energy_path = data.energy_path_from_p_state(p_state)
 
-            delta_energy_backward = [0]
+        plotting.plot_energy_path(energy_path, plt.gca())
 
-            while not converged:
-                transition.dimer_shift(p_state, True)
-                configuration.add_noise(p_state, NOISE_SCALE, idx_image=0)
-
-                simulation.start(p_state, simulation.METHOD_GNEB, simulation.SOLVER_LBFGS_OSO)
-                energies = chain.get_energy(p_state)
-
-                delta_E = energies[-1] - energies[0]
-                delta_energy_backward.append(delta_E)
-
-                print(delta_E)
-                print(convergence_energy*delta_Rx)
-
-                if not output_chain_backward is None:
-                    io.image_append(p_state, output_chain_backward, idx_image=0)
-
-                iteration += 1
-                if iteration >= min_iter:
-                    converged = abs(delta_E) < convergence_energy*delta_Rx
-                    if max_iter > 0 and iteration >= max_iter:
-                        break
-                np.savetxt("delta_energy_backward.txt", delta_energy_backward)
-
-            if relax_ends:
-                configuration.add_noise(p_state, NOISE_SCALE, idx_image=1)
-                simulation.start(p_state, simulation.METHOD_LLG, simulation.SOLVER_LBFGS_OSO, idx_image=0)
-                if not output_chain_backward is None:
-                    io.image_append(p_state, output_chain_backward, idx_image=0)
+        plt.savefig( os.path.join(OUTPUT_DIR, "total_path.png"))
+        np.savetxt(  os.path.join(OUTPUT_DIR, "rx_interpolated.txt"), energy_path.interpolated_reaction_coordinate)
+        np.savetxt(  os.path.join(OUTPUT_DIR, "energies_interpolated.txt"), energy_path.interpolated_total_energy)
+        np.savetxt(  os.path.join(OUTPUT_DIR, "rx.txt"), energy_path.reaction_coordinate)
+        np.savetxt(  os.path.join(OUTPUT_DIR, "energies.txt"), energy_path.total_energy)
 
 if __name__ == "__main__":
     from spirit_extras import import_spirit
@@ -152,17 +168,17 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("paths",        help = "calculation folders, which need to exist at the specified location", type=str, nargs="+")
     parser.add_argument("-i",           help = "input path, relative to calculation folder" , required=False, type=str, default=None)
-    parser.add_argument("-of",          help = "output path, relative to calculation folder", required=False, type=str, default="chain_file_forward.ovf")
-    parser.add_argument("-ob",          help = "output path, relative to calculation folder", required=False, type=str, default="chain_file_backward.ovf")
-    parser.add_argument("-Rx",          help = "output path, relative to calculation folder", required=False, type=float, default = 1)
-    parser.add_argument("-convergence", help = "output path, relative to calculation folder", required=False, type=float, default = 1)
-    parser.add_argument("-min_iter",    help = "output path, relative to calculation folder", required=False, type=int, default = 10)
-    parser.add_argument("-max_iter",    help = "output path, relative to calculation folder", required=False, type=int, default = -1)
-    parser.add_argument("-backward",    help = "output path, relative to calculation folder", action="store_true", required=False)
-    parser.add_argument("-forward",     help = "output path, relative to calculation folder",  action="store_true", required=False)
-    parser.add_argument("-relax_ends",  help = "output path, relative to calculation folder",  action="store_true", required=False)
+    parser.add_argument("-o",           help = "output path, relative to calculation folder", required=False, type=str, default="chain_file_total.ovf")
+    parser.add_argument("-Rx",          help = "delta Rx between chain images", required=False, type=float, default = 1)
+    parser.add_argument("-convergence", help = "convergence parameterr", required=False, type=float, default = 1)
+    parser.add_argument("-min_iter",    help = "minimum number of iterations", required=False, type=int, default = 10)
+    parser.add_argument("-max_iter",    help = "maximum number of iterations", required=False, type=int, default = -1)
+    parser.add_argument("-backward",    help = "build the backward chain", action="store_true", required=False)
+    parser.add_argument("-forward",     help = "build the forward chain",  action="store_true", required=False)
+    parser.add_argument("-relax_ends",  help = "if the endpoints should be relaxed",  action="store_true", required=False)
+    parser.add_argument("-prefix",      help = "prefix for outputfiles", type=str, required=False, default="")
 
     args = parser.parse_args()
 
     for f in args.paths:
-        main(f, args.i, args.of, args.ob, delta_Rx=args.Rx, convergence_energy=args.convergence, min_iter=args.min_iter, max_iter=args.max_iter, forward=args.forward, backward=args.backward, relax_ends=args.relax_ends)
+        main(f, args.i, args.o, delta_Rx=args.Rx, convergence_energy=args.convergence, min_iter=args.min_iter, max_iter=args.max_iter, forward=args.forward, backward=args.backward, relax_ends=args.relax_ends, prefix=args.prefix)
