@@ -1,6 +1,6 @@
 from spirit_extras import import_spirit, util, data
 
-def main(output_file, input_file, noi, background, radius, hopfion_normal, state_prepare_callback=None, input_image = None, shrinking_hopfion=False):
+def main(output_file, input_file, noi, background, radius, hopfion_normal, state_prepare_callback=None, input_image = None, idx_input_image=0, final_image = None, shrinking_hopfion=False):
     from spirit import state, configuration, simulation, io, geometry, chain, transition
 
     import os
@@ -17,18 +17,22 @@ def main(output_file, input_file, noi, background, radius, hopfion_normal, state
 
         chain.set_length(p_state, noi)
 
-        if not input_image:
+        if input_image is None:
             configuration.domain(p_state, background, idx_image=0)
             configuration.hopfion(p_state, radius, normal=hopfion_normal, idx_image=0)
             configuration.add_noise(p_state, 1e-2, idx_image=0)
+            simulation.start(p_state, simulation.METHOD_LLG, simulation.SOLVER_LBFGS_OSO, idx_image=0)
         else:
-            io.image_read(p_state, input_image, idx_image_infile=0, idx_image_inchain=0)
-
-        simulation.start(p_state, simulation.METHOD_LLG, simulation.SOLVER_LBFGS_OSO, idx_image=0)
+            io.image_read(p_state, input_image, idx_image_infile=idx_input_image, idx_image_inchain=0)
+            # configuration.add_noise(p_state, 1e-4, idx_image=0)
+            # simulation.start(p_state, simulation.METHOD_LLG, simulation.SOLVER_LBFGS_OSO, idx_image=0)
 
         if noi>1:
-            configuration.domain(p_state, background, idx_image=noi-1)
-            simulation.start(p_state, simulation.METHOD_LLG, simulation.SOLVER_LBFGS_OSO, idx_image=noi-1)
+            if final_image is None:
+                configuration.domain(p_state, background, idx_image=noi-1)
+                # simulation.start(p_state, simulation.METHOD_LLG, simulation.SOLVER_LBFGS_OSO, idx_image=noi-1)
+            else:
+                io.image_read(p_state, final_image, idx_image_infile=0, idx_image_inchain=noi-1)
 
             if shrinking_hopfion:
                 for i in range(1, noi-1):
@@ -45,16 +49,16 @@ def main(output_file, input_file, noi, background, radius, hopfion_normal, state
 if __name__ == "__main__":
     import argparse, os
     parser = argparse.ArgumentParser()
-    parser.add_argument('-o',           dest="output_file", type=str, nargs='?', default="output.ovf", help='The output folder')
-    parser.add_argument('-f',           dest="input_file",  type=str, nargs='?', default="input.cfg", help='The input file')
-    parser.add_argument('-ii',          dest="input_image", type=str, nargs='?', default=None, help='The input image (ovf file)')
-    parser.add_argument('--noi',        dest="noi",         type=int, nargs='?', default=10, help='The number of images')
-    parser.add_argument('--mode',       dest="mode",        type=str, nargs='?', default=10, help='mode')
-    parser.add_argument('--radius',     dest="radius",      type=float, help='radius of initial hopfion', required=True)
-    parser.add_argument('--normal',     dest="normal",      nargs='+',   help='normal of initial hopfion', required=True)
-    parser.add_argument('--background', dest="background",  nargs='+',   help='direction of ferromagnetic background', required=True)
-    parser.add_argument('--size', dest="size",  nargs='+',  help='cell_size', required=True)
-    parser.add_argument('--pinned_radius', dest="pinned_radius", nargs='?', default=-1, help='the radius of the sphere of pinned spins')
+    parser.add_argument('-o',               dest="output_file", type=str, nargs='?', default="output.ovf", help='The output folder')
+    parser.add_argument('-f',               dest="input_file",  type=str, nargs='?', default="input.cfg", help='The input file')
+    parser.add_argument('-ii',              dest="input_image", type=str, nargs='?', default=None, help='The input image (ovf file)')
+    parser.add_argument('-idx_input_image', dest="idx_input_image", type=int, nargs='?', default=None, help='Index of the image in the input file')
+    parser.add_argument('-noi',            dest="noi",         type=int, nargs='?', default=20, help='The number of images')
+    parser.add_argument('-radius',         dest="radius",      type=float, help='radius of initial hopfion', required=False, default=3)
+    parser.add_argument('-normal',         dest="normal",      nargs='+',   help='normal of initial hopfion', required=False, default=[0,0,1])
+    parser.add_argument('-background',     dest="background",  nargs='+',   help='direction of ferromagnetic background', required=False, default=[0,0,1])
+    parser.add_argument('-size',           dest="size",  nargs='+',  help='cell_size', required=True)
+    parser.add_argument('-pinned_radius',  dest="pinned_radius", nargs='?', default=-1, help='the radius of the sphere of pinned spins')
 
     args = parser.parse_args()
 
@@ -62,12 +66,9 @@ if __name__ == "__main__":
 
     normal     = [float(f) for f in args.normal]
     background = [float(f) for f in args.background]
-    size = [int(f) for f in args.size]
+    size       = [int(f) for f in args.size]
 
-    def choose_spirit(x):
-        return "5840c4564ba5275dc79aa7ae4cd4e79d6cf63b87".startswith(x.revision) and x.openMP and x.pinning # check for solver info revision and openMP and pinning
-
-    spirit_info = import_spirit.find_and_insert("~/Coding", stop_on_first_viable=True, choose = choose_spirit)[0]
+    spirit_info = import_spirit.find_and_insert("~/Coding/spirit_hopfion", stop_on_first_viable=True)[0]
 
     print(spirit_info)
 
@@ -78,4 +79,4 @@ if __name__ == "__main__":
         if(args.pinned_radius > 0):
             configuration.set_pinned(p_state, True, border_spherical=args.pinned_radius, inverted=True)
 
-    main( os.path.abspath(args.output_file), args.input_file, args.noi, background, args.radius, normal, state_prepare_cb, args.input_image)
+    main( os.path.abspath(args.output_file), args.input_file, args.noi, background, args.radius, normal, state_prepare_cb, args.input_image, args.idx_input_image)
