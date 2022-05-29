@@ -6,7 +6,7 @@ import calculation_folder
 SCRIPT_DIR = os.path.dirname( os.path.abspath(__file__) )
 INPUT_FILE = SCRIPT_DIR + "/input.cfg"
 
-def main(calculation_folder_path, relative_input_path, relative_output_path):
+def main(calculation_folder_path, relative_input_path, relative_output_path, idx_dimer=None, base_Rx=1):
     # Read calculation folder from input path, and get the absolute input and output paths
     calculation          = calculation_folder.calculation_folder(calculation_folder_path)
     absolute_input_path  = calculation.to_abspath(relative_input_path)
@@ -39,26 +39,30 @@ def main(calculation_folder_path, relative_input_path, relative_output_path):
 
     # Figure out idx_mid
 
-    if epath.noi() == 3: # cheeky shortcut
-        gnw.log("Using index 0 and 2 for dimer, since we have three images")
-        gnw.prepare_dimer(0,2)
+    if not idx_dimer is None:
+        gnw.log("idx dimer specified by user")
+        gnw.prepare_dimer(idx_dimer[0], idx_dimer[1])
     else:
-        n_interpolated       = epath.n_interpolated()
-        idx_max_interpolated = np.argmax(epath.interpolated_total_energy)
-        Rx_max_interpolated  = epath.interpolated_reaction_coordinate[idx_max_interpolated]
-        gnw.log(f"Rx_max_interpolated = {Rx_max_interpolated}")
+        if epath.noi() == 3: # cheeky shortcut
+            gnw.log("Using index 0 and 2 for dimer, since we have three images")
+            gnw.prepare_dimer(0,2)
+        else:
+            n_interpolated       = epath.n_interpolated()
+            idx_max_interpolated = np.argmax(epath.interpolated_total_energy)
+            Rx_max_interpolated  = epath.interpolated_reaction_coordinate[idx_max_interpolated]
+            gnw.log(f"Rx_max_interpolated = {Rx_max_interpolated}")
 
-        idx_mid_candidates = np.sort( np.argsort( np.abs(np.array(np.array(epath.reaction_coordinate) - Rx_max_interpolated )) )[:2] )
-        gnw.log(f"idx_mid_candidates = {idx_mid_candidates}")
+            idx_mid_candidates = np.sort( np.argsort( np.abs(np.array(np.array(epath.reaction_coordinate) - Rx_max_interpolated )) )[:2] )
+            gnw.log(f"idx_mid_candidates = {idx_mid_candidates}")
 
-        # Set up the gneb dimer
-        gnw.prepare_dimer(idx_mid_candidates[0])
+            # Set up the gneb dimer
+            gnw.prepare_dimer(idx_mid_candidates[0])
 
     gnw.allow_split          = False
 
     # Pre-converge with vp
-    gnw.delta_Rx_left        = 1.0
-    gnw.delta_Rx_right       = 1.0
+    gnw.delta_Rx_left        = base_Rx
+    gnw.delta_Rx_right       = base_Rx
     gnw.convergence          = 1e-5
     gnw.max_total_iterations = 40000
     gnw.run()
@@ -67,23 +71,24 @@ def main(calculation_folder_path, relative_input_path, relative_output_path):
     # Final convergence with lbfgs
     gnw.backup_chain( os.path.join(gnw.output_folder, "chain_before_lbfgs.ovf") )
     gnw.solver_gneb = simulation.SOLVER_LBFGS_OSO
-    gnw.delta_Rx_left        = 0.5
-    gnw.delta_Rx_right       = 0.5
+    gnw.delta_Rx_left        = base_Rx/2.0
+    gnw.delta_Rx_right       = base_Rx/2.0
     gnw.max_total_iterations += 20000
-    gnw.convergence          = 1e-12
+    gnw.convergence          = 1e-8
     gnw.run()
 
+    gnw.backup_chain( os.path.join(gnw.output_folder, "chain_before_mid_image.ovf") )
     # Final step, insert one image between the endpoints to get the true saddle point
     from spirit import parameters
     gnw.target_noi  = 3
     gnw.image_types = [[1, parameters.gneb.IMAGE_CLIMBING]]
-    gnw.delta_Rx_left  = 0.25
-    gnw.delta_Rx_right = 0.25
+    gnw.delta_Rx_left  = base_Rx/4.0
+    gnw.delta_Rx_right = base_Rx/4.0
     gnw.max_total_iterations += 20000
     gnw.run()
 
     gnw.history_to_file( os.path.join(gnw.output_folder, "history.txt") )
-    calculation.descriptor["saddlepoint_chain_file"] = calculation.to_relpath(output_path_gneb)
+    calculation.descriptor["saddlepoint_chain_file"] = calculation.to_relpath(absolute_output_path)
     #END DO STUFF
 
     calculation.to_json()
@@ -96,18 +101,25 @@ if __name__ == "__main__":
     parser.add_argument("paths", help = "calculation folders, which need to exist at the specified location", type=str, nargs="+")
     parser.add_argument("-i",    help = "input path, relative to calculation folder" , required=True, type=str)
     parser.add_argument("-o",    help = "output path, relative to calculation folder", required=True, type=str)
+    parser.add_argument("-idx_dimer", nargs=2, help = "indices of the dimer, if not specified they will be chosen automatically", required=False, default=None)
+    parser.add_argument("-base_Rx", type=float, help = "delta_Rx", required=False, default=1.0)
     parser.add_argument('-MPI',  help = "speed up loop over folders with MPI (useful when wildcards are used to specify multiple calculation folders)", action='store_true')
 
     args = parser.parse_args()
 
+    if not args.idx_dimer is None:
+        idx_dimer = [int(f) for f in args.idx_dimer]
+    else:
+        idx_dimer = None
+
     if not args.MPI:
         for f in args.paths:
-            main(f, args.i, args.o)
+            main(f, args.i, args.o, idx_dimer, args.base_Rx)
     else:
         from mpi_loop import mpi_loop
 
         def callable(i):
             input_path = args.paths[i]
-            main(input_path, args.i, args.o)
+            main(input_path, args.i, args.o, idx_dimer, args.base_Rx)
 
         mpi_loop(callable, len(args.paths))
