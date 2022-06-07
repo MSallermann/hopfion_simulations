@@ -103,7 +103,7 @@ for i, p in enumerate([p1,p2]):
 
     fig = plt.figure(figsize = (FIG_WIDTH, FIG_HEIGHT))
 
-    gs  = GridSpec(figure=fig, nrows=NROWS, ncols=NCOLS, left=HORIZONTAL_MARGINS[0], bottom=VERTICAL_MARGINS[0], right=1-HORIZONTAL_MARGINS[1], top=1-VERTICAL_MARGINS[1], hspace=HSPACE, wspace=WSPACE, width_ratios=WIDTH_RATIOS, height_ratios=HEIGHT_RATIOS) 
+    gs = GridSpec(figure=fig, nrows=NROWS, ncols=NCOLS, left=HORIZONTAL_MARGINS[0], bottom=VERTICAL_MARGINS[0], right=1-HORIZONTAL_MARGINS[1], top=1-VERTICAL_MARGINS[1], hspace=HSPACE, wspace=WSPACE, width_ratios=WIDTH_RATIOS, height_ratios=HEIGHT_RATIOS) 
     gs00 = GridSpecFromSubplotSpec(2, 2, subplot_spec=gs[0:-1,0:-1], hspace=0.1, wspace=0.0, height_ratios=[1,0.2], width_ratios=[1,0.1])
     a = fig.add_subplot(gs00[0,0])
 

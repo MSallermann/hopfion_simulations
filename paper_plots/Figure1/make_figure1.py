@@ -19,19 +19,19 @@ plt.rc('axes',  labelsize=8)
 
 # Settings
 cm                = 1/2.54
-FIG_WIDTH         = 21.0 * cm # Full DIN A4 width
-FIG_HEIGHT        = FIG_WIDTH / 2.418 # Golden ratio
+FIG_WIDTH         = 17.5 * cm # Full DIN A4 width
+FIG_HEIGHT        = FIG_WIDTH / 2.318 # Golden ratio
 
 NCOLS = 4
 NROWS = 2
 HORIZONTAL_MARGINS = [0.025, 0.0]
-VERTICAL_MARGINS  = [0.00, 0.0]
+VERTICAL_MARGINS  = [0.00, 0.01]
 WSPACE            = 0.0
 HSPACE            = 0.05
 WIDTH_RATIOS      = [2,2,1,1]
 HEIGHT_RATIOS     = None
 
-def annotate(ax, text, pos = [0,1], fontsize=12):
+def annotate(ax, text, pos = [0,1], fontsize=8):
     ax.text(*pos, text, fontsize=fontsize, horizontalalignment='left', verticalalignment='top', transform=ax.transAxes)
 
 def image_to_ax(ax, path):
@@ -51,7 +51,7 @@ gs00 = GridSpecFromSubplotSpec(6, 8, subplot_spec=gs[0:2,0:2], hspace=0.25, wspa
 
 ax0 = fig.add_subplot(gs00[:-2, :-1])
 import plot_criterion
-annotate(ax0, "A", [-0.07,1.00])
+annotate(ax0, "(a)", [-0.1,1.00])
 plot_criterion.main(np.loadtxt("criterion_data.txt"), ax0)
 
 NAME = "hopfion_isosurface_hopfion_normal"
@@ -76,7 +76,7 @@ for i in range(8):
 # Plot schematic
 #################################
 a    = fig.add_subplot(gs[0, 3])
-annotate(a, "C")
+annotate(a, "(c)")
 path = os.path.join(SCRIPT_DIR, "renderings", "hopfion_schematic_hopfion_diagonal_0.857_5.000.png")
 image_to_ax(a, path)
 # ax1.plot(x,y)
@@ -85,7 +85,7 @@ image_to_ax(a, path)
 # Plot cross section ip
 #################################
 a = fig.add_subplot(gs[1, 3])
-annotate(a, "E")
+annotate(a, "(e)")
 path = os.path.join(SCRIPT_DIR, "renderings", "hopfion_cross_section_ip_hopfion_inplane_0.857_5.000.png")
 image_to_ax(a, path)
 
@@ -93,7 +93,7 @@ image_to_ax(a, path)
 # Plot cross section oop
 #################################
 a = fig.add_subplot(gs[1, 2])
-annotate(a, "D")
+annotate(a, "(d)")
 path = os.path.join(SCRIPT_DIR, "renderings", "hopfion_cross_section_oop_hopfion_normal_0.857_5.000.png")
 image_to_ax(a, path)
 
@@ -101,7 +101,7 @@ image_to_ax(a, path)
 # Plot cross section oop
 #################################
 a = fig.add_subplot(gs[0, 2])
-annotate(a, "B")
+annotate(a, "(b)")
 path = os.path.join(SCRIPT_DIR, "renderings", "hopfion_preimages_hopfion_diagonal_0.857_5.000.png")
 image_to_ax(a, path)
 
