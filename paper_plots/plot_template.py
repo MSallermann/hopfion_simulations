@@ -38,6 +38,8 @@ class Paper_Plot:
         plt.rc('ytick', labelsize=8)
         plt.rc('axes',  labelsize=8)
 
+        self.annotate_offset_scale = 1
+
         self.width  = width
         self.height = width
 
@@ -100,21 +102,25 @@ class Paper_Plot:
         print(row_indices)
         return [ self._fig.add_subplot(self._gs[row_idx, col_idx] ) for row_idx in row_indices ]
 
-    def annotate_graph(self, ax, xy, xy_text, text=None):
-        if not ax in self.annotation_dict:
-            self.annotation_dict[ax] = {"annotate_increment" : 0, "annotation_list" : []}
+    def annotate_graph(self, ax, xy, xy_text, text=None, key="key1", offset_scale=1):
+
+        if not key is None:
+            if not key in self.annotation_dict:
+                self.annotation_dict[key] = {"annotate_increment" : 0, "annotation_list" : []}
 
         arrowprops = dict(arrowstyle="-")
 
         if text is None:
-            text = self.annotate_letter[self.annotation_dict[ax]["annotate_increment"]]
-            self.annotation_dict[ax]["annotate_increment"]  += 1
+            text = self.annotate_letter[self.annotation_dict[key]["annotate_increment"]]
+            self.annotation_dict[key]["annotate_increment"]  += 1
 
         if type(xy_text) is str:
             xy_text = Paper_Plot.offset_dict[xy_text.lower()]
 
-        self.annotation_dict[ax]["annotation_list"].append( [xy, text] )
-        ax.annotate(text, xy, xy_text, arrowprops = arrowprops, verticalalignment="center", horizontalalignment="center", textcoords="offset points")
+        if not key is None:
+            self.annotation_dict[key]["annotation_list"].append( [xy, text] )
+
+        ax.annotate(text, xy, xy_text * offset_scale, arrowprops = arrowprops, verticalalignment="center", horizontalalignment="center", textcoords="offset points")
 
 if __name__ == "__main__":
 
@@ -155,7 +161,7 @@ if __name__ == "__main__":
     for i in range(0, 40, 5):
         pplot.annotate_graph(ax_plot, (x[i], y[i]), "d")
 
-    annotation_list = pplot.annotation_dict[ax_plot]["annotation_list"]
+    annotation_list = pplot.annotation_dict["key1"]["annotation_list"]
 
     render_from_annotations(annotation_list, x, "template_renderings")
 
