@@ -6,10 +6,19 @@ import calculation_folder
 SCRIPT_DIR = os.path.dirname( os.path.abspath(__file__) )
 INPUT_FILE = SCRIPT_DIR + "/input.cfg"
 
-def main(calculation_folder_path, relative_input_path, relative_output_path, idx_dimer=None, base_Rx=1):
+def main(calculation_folder_path, relative_input_path, relative_output_path, INPUT_FROM_PREVIOUS=False):
     # Read calculation folder from input path, and get the absolute input and output paths
     calculation          = calculation_folder.calculation_folder(calculation_folder_path)
-    absolute_input_path  = calculation.to_abspath(relative_input_path)
+
+    if not INPUT_FROM_PREVIOUS:
+        absolute_input_path  = calculation.to_abspath(relative_input_path)
+    else:
+        # Try to read from a previous calculation
+        base_dir = os.path.dirname( calculation_folder_path )
+        input_calculation_folder_path = f"gamma_{calculation.descriptor["gamma"]:.3f}_l0_{ calculation.descriptor["l0"] - 0.5 :.3f}"
+        calculation_input = calculation_folder.calculation_folder( os.path.join( base_dir, input_calculation_folder_path ) )
+        absolute_input_path  = calculation_input.to_abspath(relative_input_path)
+
     absolute_output_path = calculation.to_abspath(relative_output_path)
 
     print(f"Input:   {absolute_input_path}")
@@ -61,10 +70,16 @@ def main(calculation_folder_path, relative_input_path, relative_output_path, idx
     gnw.allow_split          = False
 
     # Pre-converge with vp
-    gnw.delta_Rx_left        = base_Rx
-    gnw.delta_Rx_right       = base_Rx
-    gnw.convergence          = 1e-5
-    gnw.max_total_iterations = 40000
+    gnw.delta_Rx_left        = 1.0
+    gnw.delta_Rx_right       = 1.0
+    gnw.convergence          = 1e-7
+    gnw.max_total_iterations = 20000
+    gnw.run()
+
+    gnw.delta_Rx_left        = 0.5
+    gnw.delta_Rx_right       = 0.5
+    gnw.convergence          = 1e-7
+    gnw.max_total_iterations += 20000
     gnw.run()
 
     from spirit import simulation
@@ -88,7 +103,7 @@ def main(calculation_folder_path, relative_input_path, relative_output_path, idx
     gnw.run()
 
     gnw.history_to_file( os.path.join(gnw.output_folder, "history.txt") )
-    calculation.descriptor["saddlepoint_chain_file"] = calculation.to_relpath(absolute_output_path)
+    calculation.descriptor["saddlepoint_chain_file"] = calculation.to_relpath(absolute_output_path + "/chain.ovf")
     #END DO STUFF
 
     calculation.to_json()
@@ -104,6 +119,7 @@ if __name__ == "__main__":
     parser.add_argument("-idx_dimer", nargs=2, help = "indices of the dimer, if not specified they will be chosen automatically", required=False, default=None)
     parser.add_argument("-base_Rx", type=float, help = "delta_Rx", required=False, default=1.0)
     parser.add_argument('-MPI',  help = "speed up loop over folders with MPI (useful when wildcards are used to specify multiple calculation folders)", action='store_true')
+    parser.add_argument('-INPUT_FROM_PREVIOUS', help = "speed up loop over folders with MPI (useful when wildcards are used to specify multiple calculation folders)", action='store_true')
 
     args = parser.parse_args()
 
@@ -120,6 +136,6 @@ if __name__ == "__main__":
 
         def callable(i):
             input_path = args.paths[i]
-            main(input_path, args.i, args.o, idx_dimer, args.base_Rx)
+            main(input_path, args.i, args.o, args.INPUT_FROM_PREVIOUS)
 
-        mpi_loop(callable, len(args.paths))
+        mpi_loop(callable, len(args.paths), args.INPUT_FROM_PREVIOUS)
