@@ -50,48 +50,65 @@ def J_from_reduced(E0, l0, gamma, lam):
     J = invert_ABC([A, B, C], lattice=SC, lattice_constant=1, lam=lam)
     return J
 
-def invert_ABC(ABC):
+def invert_ABC(ABC, J1=1):
     """ Invert by fixing J1 to 1"""
 
     M_matrix = ABC_Matrix(lattice=SC, lattice_constant=1)
     first_column = M_matrix[:,0]
     sub_matrix   = M_matrix[:,1:]
 
-    J = np.linalg.inv(sub_matrix).dot( np.asarray(ABC) - first_column )
-    return np.array([1, *J])
+    J = np.linalg.inv(sub_matrix).dot( np.asarray(ABC) - J1*first_column )
+    return np.array([J1, *J])
 
-def J_from_reduced(E0, l0, gamma):
+def J_from_reduced(E0, l0, gamma, J1):
     ABC = ABC_from_reduced(E0, l0, gamma)
-    return invert_ABC(ABC)
+    return invert_ABC(ABC, J1)
 
 if __name__ == "__main__":
 
-    J = [1, -0.25, 0.0004, -0.0001] # B = 0
-    matrix = ABC_Matrix( lattice=SC, lattice_constant=1 )
-    ABC = matrix.dot(J)
-    J_new = invert_ABC(ABC)
-    print( f"E0 = {get_E0(*ABC)}" )
-    print(f"J = {J}")
-    print(f"ABC = {ABC}")
-    print(f"J_new = {J_new}")
+    E0    = 1
+    l0    = 5
+    gamma = 1
 
-    J = [1, 0.3, 0.246, -0.793] # C = 0
-    matrix = ABC_Matrix( lattice=SC, lattice_constant=1 )
-    ABC = matrix.dot(J)
-    J_new = invert_ABC(ABC)
-    print( f"E0 = {get_E0(*ABC)}" )
-    print(f"J = {J}")
-    print(f"ABC = {ABC}")
-    print(f"J_new = {J_new}")
+    print(J_from_reduced(E0, l0, gamma, J1=40))
 
-    J = [1, 0.2, -0.273, -0.174] # C = 6B
-    matrix = ABC_Matrix( lattice=SC, lattice_constant=1 )
-    ABC = matrix.dot(J)
-    J_new = invert_ABC(ABC)
-    print( f"E0 = {get_E0(*ABC)}" )
-    print(f"J = {J}")
-    print(f"ABC = {ABC}")
-    print(f"J_new = {J_new}")
+
+    # E0    = 0.0025
+    E0    = 1
+
+    l0    = 5
+    gamma = 1
+
+    print(J_from_reduced(E0, l0, gamma, J1=1))
+
+    # J = [ 40, 10, ]
+
+    # J = [1, -0.25, 0.0004, -0.0001] # B = 0
+    # matrix = ABC_Matrix( lattice=SC, lattice_constant=1 )
+    # ABC = matrix.dot(J)
+    # J_new = invert_ABC(ABC)
+    # print( f"E0 = {get_E0(*ABC)}" )
+    # print(f"J = {J}")
+    # print(f"ABC = {ABC}")
+    # print(f"J_new = {J_new}")
+
+    # J = [1, 0.3, 0.246, -0.793] # C = 0
+    # matrix = ABC_Matrix( lattice=SC, lattice_constant=1 )
+    # ABC = matrix.dot(J)
+    # J_new = invert_ABC(ABC)
+    # print( f"E0 = {get_E0(*ABC)}" )
+    # print(f"J = {J}")
+    # print(f"ABC = {ABC}")
+    # print(f"J_new = {J_new}")
+
+    # J = [1, 0.2, -0.273, -0.174] # C = 6B
+    # matrix = ABC_Matrix( lattice=SC, lattice_constant=1 )
+    # ABC = matrix.dot(J)
+    # J_new = invert_ABC(ABC)
+    # print( f"E0 = {get_E0(*ABC)}" )
+    # print(f"J = {J}")
+    # print(f"ABC = {ABC}")
+    # print(f"J_new = {J_new}")
 
     # ABC_old, mat = ABC( J_old, SC)
     # A_old, B_old, C_old = ABC_old
