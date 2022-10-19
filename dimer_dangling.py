@@ -85,14 +85,16 @@ def main(calculation_folder_path, path_to_dimer=None, output_chain=None, delta_R
 
                 simulation.start(p_state, simulation.METHOD_GNEB, simulation.SOLVER_LBFGS_OSO)
                 energies = chain.get_energy(p_state)
-                delta_E = energies[-1] - energies[0]
 
-                print(f"delta_E = {delta_E:.5f}, |delta_E| > {convergence_energy*delta_Rx:.5f}")
+                # Backward chain, therefore delta_E > 0
+                delta_E  = energies[-1] - energies[0]
+
+                print(f"delta_E = {delta_E:.5f}, delta_E > {convergence_energy*delta_Rx:.5f}")
                 append(p_state, 0, noi_bf)
 
                 iteration += 1
                 if iteration >= min_iter:
-                    converged = abs(delta_E) < convergence_energy*delta_Rx
+                    converged = delta_E < convergence_energy*delta_Rx
                     if max_iter > 0 and iteration >= max_iter:
                         break
 
@@ -117,9 +119,10 @@ def main(calculation_folder_path, path_to_dimer=None, output_chain=None, delta_R
                 simulation.start(p_state, simulation.METHOD_GNEB, simulation.SOLVER_LBFGS_OSO)
                 energies = chain.get_energy(p_state)
 
+                # Forward chain, therefore delta_E < 0
                 delta_E = energies[-1] - energies[0]
 
-                print(f"delta_E = {delta_E:.5f}, |delta_E| > {convergence_energy*delta_Rx:.5f}")
+                print(f"delta_E = {delta_E:.5f}, delta_E < {-convergence_energy*delta_Rx:.5f}")
                 append(p_state, 1, noi_bf)
                
                 transition.dimer_shift(p_state, False)
@@ -127,7 +130,7 @@ def main(calculation_folder_path, path_to_dimer=None, output_chain=None, delta_R
 
                 iteration += 1
                 if iteration >= min_iter:
-                    converged = abs(energies[-1] - energies[0]) < convergence_energy*delta_Rx
+                    converged = energies[-1] - energies[0] > -convergence_energy*delta_Rx
                     if max_iter > 0 and iteration >= max_iter:
                         break
 
@@ -152,9 +155,10 @@ def main(calculation_folder_path, path_to_dimer=None, output_chain=None, delta_R
         simulation.start(p_state, simulation.METHOD_GNEB, simulation.SOLVER_VP, n_iterations=1)
         energy_path = data.energy_path_from_p_state(p_state)
 
+        plot_path = os.path.join(OUTPUT_DIR, "total_path.png")
         plotting.plot_energy_path(energy_path, plt.gca())
-
-        plt.savefig( os.path.join(OUTPUT_DIR, "total_path.png"))
+        print(f"Output plot to: {plot_path}")
+        plt.savefig( plot_path )
         np.savetxt(  os.path.join(OUTPUT_DIR, "rx_interpolated.txt"), energy_path.interpolated_reaction_coordinate)
         np.savetxt(  os.path.join(OUTPUT_DIR, "energies_interpolated.txt"), energy_path.interpolated_total_energy)
         np.savetxt(  os.path.join(OUTPUT_DIR, "rx.txt"), energy_path.reaction_coordinate)
