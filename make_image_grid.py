@@ -78,6 +78,8 @@ def main(paths, renderings_base_path, image_name="rendering.png", grid_image_out
     xtick_labels = [ f"{i}/7" for i in range(8)]
     xtick_labels[0]  = "0"
     xtick_labels[-1] = "1"
+
+    ax_frame.tick_params(right=True, top=True, labelright=True, labeltop=True, labelrotation=0)
     ax_frame.set_xticks( [ i/7.0 for i in range(8)] )
     ax_frame.set_xticklabels( xtick_labels )
     ax_frame.set_xlabel(r"$\gamma$")
