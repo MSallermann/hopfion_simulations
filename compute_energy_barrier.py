@@ -20,7 +20,7 @@ def main(path):
         configuration.domain(p_state, [0,0,1])
         hamiltonian.set_exchange(p_state, len(calculation.descriptor["J"]), calculation.descriptor["J"])
 
-    with state.State("input.cfg", quiet=True) as p_state:
+    with state.State("input.cfg", quiet=False) as p_state:
         state_prepare_cb(p_state)
         chain.set_length(p_state, 3)
 
@@ -34,6 +34,7 @@ def main(path):
         epath = data.energy_path_from_p_state(p_state)
 
         calculation.descriptor["energy_barrier"]               = epath.barrier()
+        calculation.descriptor["energy_barrier_reduced"]       = epath.barrier() / params["E0"]
         calculation.descriptor["energy_barrier_divided_by_E0"] = epath.barrier() / (epath.total_energy[0] - epath.total_energy[2])
 
     calculation.to_json()
