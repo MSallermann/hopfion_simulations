@@ -54,6 +54,37 @@ class calculation_folder:
         else:
             return False
 
+    def _replace_from_dict(self, string, dict):
+        import re
+
+        pattern_str = "\{[a-zA-Z0-9]+(?::[^\}^:]*)?\}"
+        pattern = re.compile(pattern_str)
+        m = pattern.findall(string)
+
+        for temp in m:
+            split_match = temp[1:-1].split(':')
+            key_match = split_match[0]
+
+            if len(split_match) == 2: ## if len(2) we have a format string to deal with
+                format_string = split_match[1]
+                literal = "{0:" + format_string + "}"
+            else:
+                literal = "{0}"
+
+            key = split_match[0]
+            replace = literal.format(dict[key])
+            string = string.replace( temp, replace)
+
+        return string
+
+    def format(self, str):
+        """Formats a string based on the calculation descriptor.
+        Example:
+            calc.descriptor = { "number": 123.23424, "name" : "bob"}
+            calc.format('my_string_{key:.3f}_{name}') = 'my_string_123.234_bob'
+        """
+        return self._replace_from_dict(str, self.descriptor)
+
     def to_abspath(self, relative_path):
         return os.path.join(self.output_folder, relative_path)
 
