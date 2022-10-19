@@ -13,8 +13,11 @@ import compute_max_angle
 import json
 
 SCRIPT_DIR         = os.path.dirname( os.path.abspath(__file__) )
-OUTPUT_LOCAL       = "/local/th1/iff003/saller/"
-OUTPUT_BASE_FOLDER = os.path.join(OUTPUT_LOCAL, "gamma_l0_calculations")
+# OUTPUT_LOCAL       = "/local/th1/iff003/saller/"
+
+OUTPUT_LOCAL       = SCRIPT_DIR
+
+OUTPUT_BASE_FOLDER = os.path.join(OUTPUT_LOCAL, "calculations_new_J")
 # OUTPUT_BASE_FOLDER = os.path.join(SCRIPT_DIR, "hopfions_64")
 
 INPUT_FILE         = SCRIPT_DIR + "/input.cfg"
@@ -26,7 +29,7 @@ def main():
     gamma_list = [i/7.0 for i in range(8)]
     l0_list    = np.array([1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0])[::-1]
 
-    NOI     = 20
+    NOI     = 1
     N_CELLS = [64, 64, 64]
 
     # N_CELLS = [32, 32, 32]
@@ -68,8 +71,9 @@ def main():
 
         input_image = os.path.join(SCRIPT_DIR, "hopfions_64", name, "initial_chain.ovf")
 
-        E0      = 0.025 # me
-        J       = compute_abc.J_from_reduced(E0, l0, gamma).tolist()
+        E0      = 0.25 # me
+        J1      = 40
+        J       = compute_abc.J_from_reduced(E0, l0, gamma, J1=40).tolist()
         ABC     = compute_abc.ABC_from_reduced(E0, l0, gamma)
 
         folder.descriptor = dict(

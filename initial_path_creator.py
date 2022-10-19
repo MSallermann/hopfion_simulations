@@ -20,12 +20,12 @@ def main(output_file, input_file, noi, background, radius, hopfion_normal, state
         if input_image is None:
             configuration.domain(p_state, background, idx_image=0)
             configuration.hopfion(p_state, radius, normal=hopfion_normal, idx_image=0)
-            configuration.add_noise(p_state, 1e-2, idx_image=0)
+            configuration.add_noise(p_state, 1e-6, idx_image=0)
             simulation.start(p_state, simulation.METHOD_LLG, simulation.SOLVER_LBFGS_OSO, idx_image=0)
         else:
             io.image_read(p_state, input_image, idx_image_infile=idx_input_image, idx_image_inchain=0)
-            # configuration.add_noise(p_state, 1e-4, idx_image=0)
-            # simulation.start(p_state, simulation.METHOD_LLG, simulation.SOLVER_LBFGS_OSO, idx_image=0)
+            configuration.add_noise(p_state, 1e-6, idx_image=0)
+            simulation.start(p_state, simulation.METHOD_LLG, simulation.SOLVER_LBFGS_OSO, idx_image=0)
 
         if noi>1:
             if final_image is None:
