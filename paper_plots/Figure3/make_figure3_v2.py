@@ -21,27 +21,39 @@ plt.rc('axes',  labelsize=8)
 
 # Settings
 cm                = 1/2.54
-FIG_WIDTH         = 11.0 * cm # Full DIN A4 width
-FIG_HEIGHT        = FIG_WIDTH * 4/5 * 0.9 #/ 1.6 # Golden ratio
+FIG_WIDTH         = 11 * cm # Full DIN A4 width
 
 NCOLS = 5
 NROWS = 4
 
-HORIZONTAL_MARGINS = [0.11, 0.0] # left right
-VERTICAL_MARGINS   = [0.01, 0.1] # bottom top
+HORIZONTAL_MARGINS = [0.1, 0.05] # left right
+VERTICAL_MARGINS   = [0.15, 0.05] # bottom top
 WSPACE             = 0.02
-HSPACE             = 0.01
+HSPACE             = 0.02
 WIDTH_RATIOS      = None
 HEIGHT_RATIOS     = None
 
-def annotate(ax, text, pos = [0,1], fontsize=8):
+## target 
+ASPECT_RATIO = 5/4 # Width of subplots divided by height
+# Compute height from desired aspect ratio and margins
+FIG_HEIGHT = FIG_WIDTH * (1 - HORIZONTAL_MARGINS[0] - HORIZONTAL_MARGINS[1]) / (1 - VERTICAL_MARGINS[0] - VERTICAL_MARGINS[1]) / ASPECT_RATIO
+
+def annotate(ax, text, pos = [0,0.95], fontsize=8):
     ax.text(*pos, text, fontsize=fontsize, horizontalalignment='left', verticalalignment='top', transform=ax.transAxes)
 
 def image_to_ax(ax, path):
     image = plt.imread(path)
     ax.imshow(image)
-    ax.axis("off")
+    # ax.axis("off")
+    ax.tick_params(axis='both', which='both', bottom=0, left=0, labelbottom=0, labelleft=0)
+    a.spines["right"].set_visible(False)
+    a.spines["left"].set_visible(False)
+    a.spines["top"].set_visible(False)
+    a.spines["bottom"].set_visible(False)
 
+
+# Need these to place the annotations
+annotate_letter = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 offset_u = 1.5*np.array([0,10])
 offset_r = 1.5*np.array([10,0])
 offset_l = -1.5*offset_r
@@ -58,9 +70,9 @@ class plot_data:
         self.annotations = []
         self.globule_idx = 0
 
-p1 = plot_data()
-p1.gamma = 0.857
-p1.l0 = 2.5
+p1             = plot_data()
+p1.gamma       = 0.857
+p1.l0          = 2.5
 p1.globule_idx = 24
 p1.annotations = [
         [0, offset_d],
@@ -79,7 +91,7 @@ p2.gamma = 0.857
 p2.l0 = 5.0
 p2.globule_idx = 32
 p2.annotations = [
-        [0, offset_d],
+        [0, offset_u],
         [11, offset_ul],
         [12, offset_r],
         [13, offset_r],
@@ -91,9 +103,8 @@ p2.annotations = [
 
 for i, p in enumerate([p1,p2]):
     gamma = p.gamma 
-    l0 = p.l0 
-    annotate_idx    = p.annotations
-    annotate_letter = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    l0    = p.l0 
+    annotate_idx = p.annotations
 
     BASE_PATH = "/home/moritz/hopfion_simulations/all_sp"
     calculation_path = os.path.join(BASE_PATH, f"gamma_{gamma:.3f}_l0_{l0:.3f}")
@@ -105,19 +116,26 @@ for i, p in enumerate([p1,p2]):
 
     fig = plt.figure(figsize = (FIG_WIDTH, FIG_HEIGHT))
 
-
     # fig.suptitle(rf"$\gamma = {gamma:.3f}, r_0 = {l0:.3f} a$")
-    fig.suptitle(plot_util.gamma_r0_string(gamma, l0))
+    # fig.suptitle(plot_util.gamma_r0_string(gamma, l0))
 
-
+    # Overall gridspec
     gs = GridSpec(figure=fig, nrows=NROWS, ncols=NCOLS, left=HORIZONTAL_MARGINS[0], bottom=VERTICAL_MARGINS[0], right=1-HORIZONTAL_MARGINS[1], top=1-VERTICAL_MARGINS[1], hspace=HSPACE, wspace=WSPACE, width_ratios=WIDTH_RATIOS, height_ratios=HEIGHT_RATIOS) 
-    gs00 = GridSpecFromSubplotSpec(2, 2, subplot_spec=gs[0:-1,0:-1], hspace=0.1, wspace=0.0, height_ratios=[1,0.2], width_ratios=[1,0.1])
-    a = fig.add_subplot(gs00[0,0])
 
+    # Gridspec with margins to contain plot of path
+    # gs00 = GridSpecFromSubplotSpec(2, 2, subplot_spec=gs[1:,0:-1], hspace=0.1, wspace=0.0, height_ratios=[1,0.2], width_ratios=[1,0.1])
+
+    # Throwaway axis that just draws a frame around the grid spec
+
+    a = fig.add_subplot(gs[1:,0:-1])
+    a.spines["top"].set_color("lightgray")
+    a.spines["right"].set_color("lightgray")
     a.plot(rx_inter, energies_inter, color="C0", ls="-")
     a.plot(rx, energies, mec="black", mfc="C0", ls="None", marker=".")
     a.set_xlabel("Reaction coordinate [arb.]")
     a.set_ylabel("Energy [meV]")
+
+    a.text(*[0.25,0.25], plot_util.r0_string(l0), fontsize=8, horizontalalignment='right', verticalalignment='top', transform=a.transAxes, bbox=dict(facecolor='none', edgecolor='black'))
 
     for i,(idx,anno) in enumerate(annotate_idx):
         xy  = (rx[idx], energies[idx])
@@ -135,26 +153,34 @@ for i, p in enumerate([p1,p2]):
 
     import render_charge_dists
     render_charge_dists.run(annotate_idx, calculation_path)
-    NAME = f"{gamma:.3f}_{l0:.3f}_charge"
+    # NAME = f"{gamma:.3f}_{l0:.3f}_charge"
 
     # for i in range(len(rx)):
     #     render_charge_dists.run([[i,""]], calculation_path)
 
     for col in range(0,NCOLS):
-        a         = fig.add_subplot(gs[-1,col])
+        a         = fig.add_subplot(gs[0,col])
         idx       = annotate_idx[col][0]
         plot_name = f"{idx}_{NAME}.png"
         path = os.path.join(SCRIPT_DIR, "renderings", plot_name)
         annotate(a, annotate_letter[col])
         image_to_ax(a, path)
+        a.spines["right"].set_visible(True)
+        a.spines["right"].set_color("lightgray")
 
-    for i,row in enumerate( range(0,NROWS-1)[::-1] ):
+    for i,row in enumerate( range(1,NROWS) ):
         a         = fig.add_subplot(gs[row,-1])
         idx       = annotate_idx[i + NCOLS][0]
         plot_name = f"{idx}_{NAME}.png"
         path = os.path.join(SCRIPT_DIR, "renderings", plot_name)
         annotate(a, annotate_letter[i + NCOLS])
         image_to_ax(a, path)
+        a.spines["top"].set_visible(True)
+        a.spines["top"].set_color("lightgray")
+
+    a = fig.add_axes( gs[:,:].get_position(fig) )
+    a.set_facecolor([0,0,0,0])
+    a.tick_params(axis='both', which='both', bottom=0, left=0, labelbottom=0, labelleft=0)
 
     # print(mpl.rcParams.keys())
-    fig.savefig(f"plot3_{gamma}_{l0}.png", dpi=300)
+    fig.savefig(f"plot3_{gamma}_{l0}_v2.png", dpi=300)

@@ -63,17 +63,20 @@ def render_from_annotations(annotation_list, xlist, output_directory):
         plot_spin_configuration.main(calculation_folder_path=calculation_path, relative_input_path=input_path, relative_output_path=plot_name, idx_image_infile=idx_infile, distance=60, annotate=-1, mode="isosurface", view="hopfion_diagonal", output_dir=output_directory, output_suffix="")
 
 pplot = Paper_Plot(17.5 * Paper_Plot.cm)
-pplot.nrows = 4
-pplot.ncols = 10
+pplot.nrows = 1
+pplot.ncols = 2
+pplot.wspace = 0.175
 pplot.horizontal_margins[0] = 0.065
 pplot.horizontal_margins[1] = 0.005
-pplot.vertical_margins[0]   = 0.125
+pplot.vertical_margins[0]   = 0.15
 pplot.vertical_margins[1]   = 0.0125
 
 pplot.height_from_aspect_ratio(10/4)
 
 fig = pplot.fig()
-gs  = pplot.gs()
+gs_all = pplot.gs()
+
+gs = GridSpecFromSubplotSpec(4,5,gs_all[0,0], hspace=0, wspace=0)
 
 # Main plot
 ax_plot = fig.add_subplot(gs[1:,:4])
@@ -114,32 +117,32 @@ OUTPUT_DIR = "isosurface_renderings"
 render_from_annotations(annotation_list, rx, OUTPUT_DIR)
 
 counter = 0
-for a in pplot.row(0, slice(0,5)):
+for a in pplot.row(0, slice(0,5),gs=gs):
     xy, text = annotation_list[counter]
     print(text)
     idx = np.argmin( np.abs(rx - xy[0]) )
     pplot.image_to_ax(a, os.path.join( OUTPUT_DIR, f"idx_{idx}.png" ))
 
-    a.spines["right"].set_visible(True)
-    a.spines["right"].set_color("lightgrey")
-    a.spines["left"].set_visible(True)
-    a.spines["left"].set_color("lightgrey")
+    for k,s in a.spines.items():
+        s.set_visible(True)
+        s.set_color("lightgrey")
+
     pplot.annotate(a, text )
     counter += 1
 
-for a in pplot.col(4, slice(1,None,1)):
+for a in pplot.col(4, slice(1,None,1),gs=gs):
     xy, text = annotation_list[counter]
     idx = np.argmin( np.abs(rx - xy[0]) )
     pplot.image_to_ax(a, os.path.join( OUTPUT_DIR, f"idx_{idx}.png" ))
-    a.spines["right"].set_visible(True)
-    a.spines["right"].set_color("lightgrey")
-    a.spines["top"].set_visible(True)
-    a.spines["top"].set_color("lightgrey")
+
+    for k,s in a.spines.items():
+        s.set_visible(True)
+        s.set_color("lightgrey")
+
     pplot.annotate(a, annotation_list[counter][1] )
     counter += 1
 
 pplot.spine_axis(gs[:,:])
-
 
 ##### Begin right part of plot
 
@@ -173,14 +176,13 @@ def render_from_annotations(annotation_list, xlist, output_directory):
         top_charge.main(calculation_folder_path=calculation_path, relative_input_path=input_path, relative_output_path=plot_name, idx_image_infile=idx_infile, distance=16, annotate=-1, view="hopfion_inplane", output_dir=output_directory, output_suffix="")
 
 
-gs_r = GridSpecFromSubplotSpec( 1, 2, gs[1:,5:-1])
+gs = GridSpecFromSubplotSpec( 4, 5, gs_all[0,1], hspace=0, wspace=0)
 
-ax_plot_r = fig.add_subplot( gs[1:,5:-1])
-# ax_plot_r.yaxis.tick_right()
-# ax_plot_r.yaxis.label_right()
+ax_plot_r = fig.add_subplot( gs[1:,:-1], zorder=1)
+ax_plot_r.set_facecolor([0,0,0,0])
 
-ax_plot_r.tick_params(axis='y', which='both', left=True,direction="in", labelleft=True, pad=-15)
-ax_plot_r.yaxis.set_label_coords(0.15,0.4)
+ax_plot_r.set_xlabel("Reaction coordinate [arb.]")
+ax_plot_r.set_ylabel("Bloch point distance [a]")
 
 BASE_PATH = "/home/moritz/hopfion_simulations/all_sp"
 calculation_path = os.path.join(BASE_PATH, f"gamma_{gamma:.3f}_l0_{l0:.3f}")
@@ -189,75 +191,62 @@ bp_distance = np.loadtxt( os.path.join( calculation_path, "bp_distance.txt" ) )
 ax_plot_r.spines["top"].set_color("lightgrey")
 ax_plot_r.spines["right"].set_color("lightgrey")
 
-ax_twin = ax_plot_r.twinx()
+ax_plot_r.plot(rx[:len(bp_distance)][bp_distance[:,1]>0], bp_distance[:,1][bp_distance[:,1]>0], color="black", lw=2.4)
+ax_plot_r.plot(rx[:len(bp_distance)][bp_distance[:,1]>0], bp_distance[:,1][bp_distance[:,1]>0], color="lightsalmon")
 
-ax_twin.spines["top"].set_color("lightgrey")
-ax_twin.spines["right"].set_color("lightgrey")
+ax_twin = fig.add_axes( ax_plot_r.get_position(),zorder=0)
+ax_twin.axis("off")
 
-# ax_twin.axis("off")
-# ax_twin.plot(rx_inter, energies_inter)
+ax_twin.plot(rx_inter, energies_inter,zorder=-1)
 fill_start = rx[12]
 fill_end   = 383
-
-ax_plot_r.fill_between(rx_inter, energies_inter, y2=0, where = (rx_inter>fill_start) & (rx_inter<fill_end), color=[0.7,0.8,1], edgecolor="None" )
-ax_plot_r.plot(rx_inter, energies_inter, color=[0.7,0.8,1])
-
-ax_plot_r.axis("off")
-
-ax_twin.plot(rx[:len(bp_distance)][bp_distance[:,1]>0], bp_distance[:,1][bp_distance[:,1]>0], color="black", lw=2.4)
-ax_twin.plot(rx[:len(bp_distance)][bp_distance[:,1]>0], bp_distance[:,1][bp_distance[:,1]>0], color="lightsalmon")
+ax_twin.fill_between(rx_inter, energies_inter, y2=0, where = (rx_inter>fill_start) & (rx_inter<fill_end), color=[0.7,0.8,1], edgecolor="None" )
+ax_twin.plot(rx_inter, energies_inter, color=[0.7,0.8,1])
+ax_plot_r.set_xlim(ax_twin.get_xlim())
 
 pplot.annotate_letter = pplot.annotate_letter.lower()
-pplot.annotate_graph(ax_twin, (rx[12],  bp_distance[12,1]), "r", key="key2")
-pplot.annotate_graph(ax_twin, (rx[13],  bp_distance[13,1]), "r", key="key2")
-pplot.annotate_graph(ax_twin, (rx[14],  bp_distance[14,1]), "r", key="key2")
-pplot.annotate_graph(ax_twin, (rx[16],  bp_distance[16,1]), "dr", key="key2")
-pplot.annotate_graph(ax_twin, (rx[33], bp_distance[33,1]), "dl", key="key2")
-pplot.annotate_graph(ax_twin, (rx[60], bp_distance[60,1]), "l", offset_scale=0.8, key="key2")
-pplot.annotate_graph(ax_twin, (rx[83], bp_distance[83,1]), "l",  key="key2")
-pplot.annotate_graph(ax_twin, (rx[91], bp_distance[91,1]), "l",  key="key2")
+pplot.annotate_graph(ax_plot_r, (rx[12],  bp_distance[12,1]), "r", key="key2")
+pplot.annotate_graph(ax_plot_r, (rx[13],  bp_distance[13,1]), "r", key="key2")
+pplot.annotate_graph(ax_plot_r, (rx[14],  bp_distance[14,1]), "r", key="key2")
+pplot.annotate_graph(ax_plot_r, (rx[16],  bp_distance[16,1]), "dr", key="key2")
+pplot.annotate_graph(ax_plot_r, (rx[33], bp_distance[33,1]), "dl", key="key2")
+pplot.annotate_graph(ax_plot_r, (rx[60], bp_distance[60,1]), "l", offset_scale=0.8, key="key2")
+pplot.annotate_graph(ax_plot_r, (rx[83], bp_distance[83,1]), "l",  key="key2")
+pplot.annotate_graph(ax_plot_r, (rx[91], bp_distance[91,1]), "l",  key="key2")
 
-ax_twin.set_xlim(0, rx[-1])
-
-ax_twin.set_xlabel("Reaction coordinate [arb.]")
-ax_twin.yaxis.set_label_coords(0.1,0.5)
-
-ax_twin.set_ylabel("Bloch point distance [a]", fontsize=6)
-ax_twin.tick_params(axis='y', which='both', labelleft=True, right=False, left=True, direction="in", pad=-15, labelright=False, zorder=4)
 
 OUTPUT_DIR = "charge_renderings"
 annotation_list = pplot.annotation_dict["key2"]["annotation_list"]
 render_from_annotations(annotation_list, rx, OUTPUT_DIR)
 
 counter = 0
-for a in pplot.row(0, slice(5,None)):
+for a in pplot.row(0, slice(0,None), gs=gs):
     xy, text = annotation_list[counter]
     print(text)
     idx = np.argmin( np.abs(rx - xy[0]) )
     pplot.image_to_ax(a, os.path.join( OUTPUT_DIR, f"idx_{idx}.png" ))
 
-    a.spines["right"].set_visible(True)
-    a.spines["right"].set_color("lightgrey")
-    a.spines["left"].set_visible(True)
-    a.spines["left"].set_color("lightgrey")
+    for k,s in a.spines.items():
+        s.set_visible(True)
+        s.set_color("lightgrey")
     pplot.annotate(a, text )
     counter += 1
 
-for a in pplot.col(-1, slice(1,None,1)):
+for a in pplot.col(-1, slice(1,None,1), gs=gs):
     xy, text = annotation_list[counter]
     idx = np.argmin( np.abs(rx - xy[0]) )
     pplot.image_to_ax(a, os.path.join( OUTPUT_DIR, f"idx_{idx}.png" ))
-    a.spines["right"].set_visible(True)
-    a.spines["right"].set_color("lightgrey")
-    a.spines["left"].set_visible(True)
-    a.spines["left"].set_color("lightgrey")
-    a.spines["top"].set_visible(True)
-    a.spines["top"].set_color("lightgrey")
+    for k,s in a.spines.items():
+        s.set_visible(True)
+        s.set_color("lightgrey")
     pplot.annotate(a, annotation_list[counter][1] )
     counter += 1
 
-pplot.spine_axis(gs[:,:5])
-pplot.spine_axis(gs[:,5:])
+# pplot.spine_axis(gs[:,:5])
+# pplot.spine_axis(gs[:,5:])
+
+pplot.spine_axis(gs[:,:])
+# pplot.spine_axis(gs_all[:,:])
 
 # plt.show()
-fig.savefig("test_path_template.png", dpi=300)
+fig.savefig("path_with_globules.png", dpi=300)

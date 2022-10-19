@@ -78,8 +78,8 @@ ax_plot = fig.add_subplot(gs[1:,:-1])
 ax_plot.plot(rx_inter, energies_inter)
 ax_plot.spines["top"].set_color("lightgrey")
 ax_plot.spines["right"].set_color("lightgrey")
-ax_plot.set_ylabel("Reaction coordinate [arb.]")
-ax_plot.set_xlabel("Energy [meV]")
+ax_plot.set_xlabel("Reaction coordinate [arb.]")
+ax_plot.set_ylabel("Energy [meV]")
 
 fill_start = rx[12]
 fill_end   = 383
@@ -109,7 +109,7 @@ annotation_list = pplot.annotation_dict["key1"]["annotation_list"]
 print(annotation_list)
 
 OUTPUT_DIR = "isosurface_renderings"
-render_from_annotations(annotation_list, rx, "isosurface_renderings")
+render_from_annotations(annotation_list, rx, OUTPUT_DIR)
 
 counter = 0
 for a in pplot.row(0):
