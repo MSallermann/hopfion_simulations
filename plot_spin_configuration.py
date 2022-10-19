@@ -1,3 +1,4 @@
+from pkg_resources import require
 from spirit_extras import import_spirit
 import os
 import calculation_folder
@@ -5,24 +6,37 @@ import calculation_folder
 SCRIPT_DIR = os.path.dirname( os.path.abspath(__file__) )
 INPUT_FILE = SCRIPT_DIR + "/input.cfg"
 
-def main(calculation_folder_path, relative_input_path, relative_output_path, idx_image_infile=0, mode="isosurface", view="auto", distance=80, annotate=22, absolute_paths=False):
-
+def main(calculation_folder_path, relative_input_path, relative_output_path, idx_image_infile=0, mode="isosurface", view="auto", background_color="transparent", distance=80, annotate=22, output_dir=None, output_suffix=""):
     # Read calculation folder from input path, and get the absolute input and output paths
     calculation          = calculation_folder.calculation_folder(calculation_folder_path)
+    gamma = calculation.descriptor["gamma"]
+    l0    = calculation.descriptor["l0"]
 
-    if absolute_paths:
-        absolute_input_path  = relative_input_path
-        absolute_output_path = relative_output_path
-    else:
-        absolute_input_path  = calculation.to_abspath(relative_input_path)
+    output_suffix = output_suffix.replace("{gamma}", f"{gamma:.3f}")
+    output_suffix = output_suffix.replace("{l0}",    f"{l0:.3f}")
+
+    if not output_dir is None:
+        output_dir = output_dir.replace("{gamma}", f"{gamma:.3f}")
+        output_dir = output_dir.replace("{l0}",    f"{l0:.3f}")
+
+    # Input is always relative to calculation folder
+    absolute_input_path  = calculation.to_abspath(relative_input_path)
+
+    relative_output_path += output_suffix
+    if output_dir is None:
         absolute_output_path = calculation.to_abspath(relative_output_path)
+    else:
+        absolute_output_path = os.path.join(output_dir, relative_output_path)
+
+    if not os.path.exists(os.path.dirname(absolute_output_path)):
+        os.makedirs(absolute_output_path)
 
     print(f"Input:   {absolute_input_path}")
     print(f"Output:  {absolute_output_path}")
 
     # DO STUFF HERE
     print(mode.lower())
-    known_modes = ["isosurface", "cross_section_ip", "cross_section_oop", "schematic"]
+    known_modes = ["isosurface", "mark_bloch_points", "iso_with_arrows", "cross_section_ip", "cross_section_oop", "schematic", "preimages"]
     if mode.lower() not in known_modes:
         raise Exception(f"Unknown mode: {mode.lower()}\nKnown modes {known_modes}\n")
 
@@ -41,11 +55,41 @@ def main(calculation_folder_path, relative_input_path, relative_output_path, idx
     import numpy as np
     import pyvista as pv
 
-    plotter, center, normal  = plot_util.get_pyvista_plotter(absolute_input_path, calculation.descriptor["n_cells"], idx_image_infile)
-    plotter.background_color = "transparent"
+    plotter, center, normal  = plot_util.get_pyvista_plotter(absolute_input_path, calculation.descriptor["n_cells"], idx_image_infile, DELAUNAY_PATH="/home/moritz/hopfion_simulations/delaunay64.vtk", INPUT_FILE=INPUT_FILE)
+    plotter.background_color = background_color
+    plotter.resolution = (1024, 1024)
 
     if mode.lower() == "isosurface":
         plotter.isosurface(0.0, "spins_z")
+
+    elif mode.lower() == "mark_bloch_points":
+        mesh_args = plotter.isosurface(0.0, "spins_z")
+        iso = mesh_args[0]
+        clip_cube = pv.Cube(bounds = [32,64,32,64,-1,64] ).rotate_z(45, center)
+        mesh_args[0] = mesh_args[0].clip_box(clip_cube)
+
+        if not iso:
+            print("No BP found")
+        else:
+            bp_centers, bp_cells = iso.ray_trace( center - 20*normal, center + 20*normal)
+            print("bp_centers ", bp_centers)
+            plotter.add_mesh( pv.Spline(bp_centers).tube(radius=0.25), dict(color="black" ) )
+
+    elif mode.lower() == "iso_with_arrows":
+        mesh_args = plotter.isosurface(0.0, "spins_z")
+        clip_cube = pv.Cube(bounds = [32,64,32,64,-1,64] )
+        mesh_args[0] = mesh_args[0].clip_box(clip_cube)
+        mesh_args    = plotter.arrows()
+        mesh_args[0] = mesh_args[0].threshold( (-1.00, -0.05), "spins_z")
+        # mesh_args[1] = True# mesh_args[0].threshold( (-1.00, 0.1), "spins_z")
+
+    elif mode.lower() == "preimages":
+        mesh_args    = plotter.isosurface(0.0, "spins_z")
+        # mesh_args[0] = mesh_args[0].threshold( (0.95, 1.0), scalars="spins_y").extract_surface(nonlinear_subdivision=5).smooth(100)
+        mesh_args[1] = {"color" : "lightgrey"}
+
+        # plotter.background_color = "white"
+        plot_util.add_preimages(plotter, N=8, sz=0.2)
 
     elif mode.lower() == "cross_section_ip":
         plane_normal = np.cross(normal, [1,0,0])
@@ -54,7 +98,7 @@ def main(calculation_folder_path, relative_input_path, relative_output_path, idx
         plane        = plane.interpolate(plotter._point_cloud, radius=1.5)
         # plotter.add_mesh(plane.copy().translate(-0.5 * plane_normal), {**plotter.default_render_args, "opacity" : 0.25})
 
-        plane_arrows = pyvista_plotting.arrows_from_point_cloud(plane, factor=0.6)
+        plane_arrows = pyvista_plotting.arrows_from_point_cloud(plane, factor=0.9)
 
         from spirit_extras import plotting
 
@@ -85,7 +129,7 @@ def main(calculation_folder_path, relative_input_path, relative_output_path, idx
 
         # plotter.add_mesh(plane.copy().translate(-0.5 * plane_normal), {**plotter.default_render_args, "opacity" : 0.25})
 
-        plane_arrows = pyvista_plotting.arrows_from_point_cloud(plane, factor=0.6)
+        plane_arrows = pyvista_plotting.arrows_from_point_cloud(plane, factor=0.9)
 
         spins = np.zeros(shape=(len( plane_arrows["spins_x"] ), 3))
         spins[:,0] = plane_arrows["spins_x"]
@@ -103,13 +147,13 @@ def main(calculation_folder_path, relative_input_path, relative_output_path, idx
 
     elif mode.lower() == "schematic":
         mesh_args = plotter.arrows()
-        clip_cube = pv.Cube(bounds = [32,64,32,64,-1,64] )
+        clip_cube = pv.Cube(bounds = [-1,64,32,64,-1,64] )
         # plotter.add_mesh(clip_cube, {"color":"red", "opacity":0.5})
         mesh_args[0] = mesh_args[0].clip_box( clip_cube )
         mesh_args = plotter.isosurface(0.0, "spins_z")
-        mesh_args[1] = {"color" : "black", "opacity" : 0.75}
+        mesh_args[1] = {"color" : "lightgray"}
 
-        # normal = np.array([1,1,1])
+        plotter.add_mesh( plotter._point_cloud.outline(), {"color" : "black", "line_width" : 5} )
 
         # # Clipped black isosurface
         # mesh_args       = plotter.isosurface(0.0, "spins_z")
@@ -125,13 +169,19 @@ def main(calculation_folder_path, relative_input_path, relative_output_path, idx
         plotter.rotate_camera([0,0,1], -np.pi/4)
 
     if view.lower() != "hopfion_normal":
+        # plotter.align_camera_position(axis = normal, align_direction=[1,1,0], distance=distance)
         plotter.align_camera_up(normal)
     else:
         plotter.align_camera_up([1,0,0])
+    
+    if mode.lower() == "iso_with_arrows":
+        plotter.align_camera_position(axis = normal, align_direction=[1,1,0], distance=distance)
+        plotter.align_camera_up(normal)
 
     if not os.path.exists(os.path.dirname(absolute_output_path)):
         os.makedirs(os.path.dirname(absolute_output_path))
 
+    # plotter.show()
     plotter.render_to_png( absolute_output_path )
 
     if annotate >= 1:
@@ -145,12 +195,15 @@ if __name__ == "__main__":
 
     import argparse, os
     parser = argparse.ArgumentParser()
-    parser.add_argument("paths",     help = "calculation folders, which need to exist at the specified location", type=str, nargs="+")
-    parser.add_argument("-what",     help = "what to plot. either 'hopfion' or 'sp'", required=True, type=str, default="sp")
-    parser.add_argument("-mode",     help = "what to plot. one of [isosurface, cross_section_ip, cross_section_oop]", type=str, default="isosurface")
-    parser.add_argument("-view",     help = "from which view to plot. one of [hopfion_normal, hopfion_inplane, hopfion_diagonal]", type=str, default="auto")
-    parser.add_argument("-distance", help = "distance of camera to hopfion center", required=False, type=float, default=80)
-    parser.add_argument('-annotate', help = "annotation fontsiye, 0 disables anntotation", required=False, type=int, default=18)
+    parser.add_argument("paths",       help = "calculation folders, which need to exist at the specified location", type=str, nargs="+")
+    parser.add_argument("-what",       help = "what to plot. either 'hopfion' or 'sp'", required=True, type=str, default="sp")
+    parser.add_argument("-mode",       help = "what to plot. one of [isosurface, cross_section_ip, cross_section_oop]", type=str, default="isosurface")
+    parser.add_argument("-view",       help = "from which view to plot. one of [hopfion_normal, hopfion_inplane, hopfion_diagonal]", type=str, default="auto")
+    parser.add_argument("-distance",   help = "distance of camera to hopfion center", required=False, type=float, default=80)
+    parser.add_argument("-annotate",   help = "annotation fontsiye, 0 disables anntotation", required=False, type=int, default=18)
+    parser.add_argument("-output_dir", help = "absolute output_directory, if not specified defaults to calculation folder", required=False, type=str, default=None)
+    parser.add_argument("-output_suffix", help = "suffix for output files", required=False, type=str, default="")
+    parser.add_argument("-background_color", help = "background_color", required=False, type=str, default="transparent")
 
     args = parser.parse_args()
     print(args.mode)
@@ -170,4 +223,4 @@ if __name__ == "__main__":
         else:
             raise Exception("Unknown -what argument. Choose either 'sp' or 'hopfion'")
 
-        main(f, inputpath, outputpath, idx_image, args.mode, args.view, args.distance, args.annotate)
+        main(calculation_folder_path=f, relative_input_path=inputpath, relative_output_path=outputpath, idx_image_infile=idx_image, mode=args.mode, view=args.view, distance=args.distance, background_color=args.background_color, annotate=args.annotate, output_dir=args.output_dir, output_suffix=args.output_suffix)
