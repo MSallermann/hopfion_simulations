@@ -1,14 +1,13 @@
-from spirit_extras import plotting, pyvista_plotting, import_spirit, data
+from spirit_extras import plotting, pyvista_plotting, import_spirit, data, post_processing, calculation_folder
 import matplotlib.pyplot as plt
 import numpy as np
-import calculation_folder
 import json
 import os
 
 def main(path):
     from spirit import state, geometry, chain, simulation, io, configuration
     print(path)
-    calculation = calculation_folder.calculation_folder(path)
+    calculation = calculation_folder.Calculation_Folder(path, descriptor_file="params.json")
     params = calculation.descriptor
     # print(params)
     if params["max_angle_between_neighbours"] < 1e-2:
@@ -31,10 +30,20 @@ def main(path):
 
         simulation.start(p_state, simulation.METHOD_GNEB, simulation.SOLVER_VP, n_iterations=1)
 
+        spin_system    = data.spin_system_from_p_state(p_state, idx_image=0)
+        center, normal = post_processing.hopfion_normal(spin_system)
+        radius         = post_processing.hopfion_radius(spin_system, center, normal)
+
+        calculation.descriptor["hopfion_radius"] = radius
+        calculation.descriptor["hopfion_normal"] = [n for n in normal]
+        calculation.descriptor["hopfion_center"] = [c for c in center]
+        # calculation.descriptor["hopfion_center"] = center
+
         epath = data.energy_path_from_p_state(p_state)
 
         calculation.descriptor["energy_barrier"]               = epath.barrier()
         calculation.descriptor["energy_barrier_reduced"]       = epath.barrier() / params["E0"]
+        calculation.descriptor["energy_hopfion"]               = epath.total_energy[0]
         calculation.descriptor["energy_barrier_divided_by_E0"] = epath.barrier() / (epath.total_energy[0] - epath.total_energy[2])
 
     calculation.to_json()
