@@ -38,7 +38,7 @@ def main(data, ratio, ax_r0=None, ax_gamma=None, ax_angle=None):
 
     data = np.asarray(data)
 
-    r0_list = np.unique(data[:,1])
+    r0_list    = np.unique(data[:,1])
     gamma_list = np.unique(data[:,0])
 
     # if ax_r0 is None:
@@ -64,7 +64,7 @@ def main(data, ratio, ax_r0=None, ax_gamma=None, ax_angle=None):
 
             cmap = mpl.cm.get_cmap('Reds')
             norm = get_norm(gamma_list)
-            ax.plot(tmp[:,1], tmp[:,2], color = cmap(norm(g)), mfc = cmap(norm(g)), marker="o", markersize = 6, markeredgewidth = 1.0, lw=2.5, mec = "black", label = label_text)
+            ax.plot(tmp[:,1], tmp[:,2], color = cmap(norm(g)), mfc = cmap(norm(g)), marker="o", mec = "black", label = label_text)
             # gradient_line.gradient_line(ax=plt.gca(), x=tmp[:,1], y=tmp[:,2], c=tmp[:,0])
 
         ax.set_ylabel(ylabel)
@@ -91,7 +91,7 @@ def main(data, ratio, ax_r0=None, ax_gamma=None, ax_angle=None):
 
             cmap = mpl.cm.get_cmap('Blues')
             norm = get_norm(r0_list)
-            ax.plot(tmp[:,0], tmp[:,2], color = cmap(norm(r0)), mfc = cmap(norm(r0)), marker="o", markersize = 6, markeredgewidth = 1.0, lw=2.5, mec = "black", label = label_text)
+            ax.plot(tmp[:,0], tmp[:,2], color = cmap(norm(r0)), mfc = cmap(norm(r0)), marker="o", mec = "black", label = label_text)
 
         ax.set_ylabel(ylabel)
         ax.set_xlabel(r"$\gamma$")
@@ -136,7 +136,7 @@ def main(data, ratio, ax_r0=None, ax_gamma=None, ax_angle=None):
 
             cmap = mpl.cm.get_cmap('Greens')
             norm = get_norm(gamma_list) 
-            ax.plot(tmp[:,3] / np.pi, tmp[:,2], color = cmap(norm(g)), mfc = cmap(norm(g)), marker="o", markersize = 6, markeredgewidth = 1.0, lw=2.5, mec = "black", label = label_text)
+            ax.plot(tmp[:,3] / np.pi, tmp[:,2], color = cmap(norm(g)), mfc = cmap(norm(g)), marker="o", mec = "black", label = label_text)
 
         ax.set_xticks( [1/8, 2/8, 3/8, 0.5] )
         ax.set_xticklabels( [r"$1/8\pi$", r"$1/4\pi$", r"$3/8\pi$", r"$1/2\pi$"] )
