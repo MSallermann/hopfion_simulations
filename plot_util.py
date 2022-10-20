@@ -1,4 +1,59 @@
+def r0_string(r0):
+    import math
+    frac, whole = math.modf(r0)
 
+    if frac > 1e-3:
+        r0_string    = f"{r0:.1f}"
+    else:
+        r0_string    = f"{r0:.0f}"
+
+    return "$ r_0 = " + r0_string + r"\,\mathrm{a}$"
+
+def gamma_to_frac(gamma):
+    upper = int(round( gamma * 7 ))
+
+    if upper==0:
+        gamma_string = rf"0"
+    elif upper==7:
+        gamma_string = rf"1"
+    else:
+        gamma_string = rf"{upper}/\,7"
+
+    return gamma_string
+
+def gamma_string(gamma):
+    upper = int(round( gamma * 7 ))
+
+    if upper==0:
+        gamma_string = rf"0"
+    elif upper==7:
+        gamma_string = rf"1"
+    else:
+        gamma_string = rf"{upper}/\,7"
+
+    return rf"$\gamma = {gamma_string}$"
+
+def gamma_r0_string(gamma, r0):
+    upper = int(round( gamma * 7 ))
+
+    if upper==0:
+        gamma_string = rf"0"
+    elif upper==7:
+        gamma_string = rf"1"
+    else:
+        gamma_string = rf"{upper}/\,7"
+
+    import math
+    frac, whole = math.modf(r0)
+
+    if frac > 1e-3:
+        r0_string    = f"{r0:.1f}"
+    else:
+        r0_string    = f"{r0:.0f}"
+
+    res =  rf"$\gamma = {gamma_string},\;r_0 = {r0_string}"
+    res += r"\,\mathrm{a}$"
+    return res
 
 def annotate_text(path_to_png, text, dpi=300, fontsize=15, alpha=1.0, background="white"):
     import matplotlib
@@ -73,17 +128,18 @@ def set_view(plotter, hopfion_center, hopfion_normal, distance = 80, view="hopfi
 def add_preimages(plotter, N=16, sz=0.2):
     from spirit_extras import import_spirit, post_processing, plotting
     import numpy as np
+    sin_sz = np.sin(np.arccos(sz))
     for i in range(N):
         phi = 2 * np.pi / N * i
-        spin = [np.sin(phi),np.cos(phi),sz]
+        spin   = [np.sin(phi) * sin_sz, np.cos(phi) * sin_sz, sz]
         colors = plotting.get_rgba_colors( [spin] )
-        plotter.add_preimage(spin, tol=0.15, n_neighbours=24, render_args={"color" : colors[0][:3]})
+        plotter.add_preimage(spin, tol=0.08, n_neighbours=48, render_args={"color" : colors[0][:3]})
 
 def clip_cube(center, normal, cube_type, infinity=100, zero=1):
     import numpy as np
     import pyvista as pv
 
-    axis  = np.cross(normal, [0,0,1])
+    axis  = np.cross(normal, [1,0,0])
     angle = -np.arccos(normal[2]) * 180/np.pi
 
     if cube_type.lower() == "normal":
