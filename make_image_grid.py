@@ -1,60 +1,115 @@
-def main(paths):
-    import numpy as np
-    import matplotlib.pyplot as plt
-    from mpl_toolkits.axes_grid1 import ImageGrid
+from spirit_extras.plotting import Paper_Plot
+from spirit_extras.calculation_folder import Calculation_Folder
+import numpy as np
+import shutil
+
+def main(paths, renderings_base_path, image_name="rendering.png", grid_image_output="grid.png"):
 
     data_list = []
 
+    # First step is to go over all possible data paths, collect and render the images if necessary
     for path in paths:
-        print(path)
-        calculation = calculation_folder.calculation_folder(path)
-        gamma       = calculation.descriptor["gamma"]
-        l0          = calculation.descriptor["l0"]
-        path_image  = glob.glob(os.path.join(path, "sp*.png"))
+        base_path = os.path.basename(path)
+        image_path = os.path.join( renderings_base_path, base_path, image_name )
 
-        if len(path_image) < 1:
-            continue
+        calc = Calculation_Folder(path, descriptor_file="params.json")
+
+        print(f"===")
+        print(f"path       = {path}")
+        print(f"base_path  = {base_path}")
+        print(f"image_path = {image_path}")
+
+        if not os.path.exists(image_path):
+            import plot_spin_configuration
+            if not os.path.exists( os.path.dirname(image_path) ):
+                os.makedirs( os.path.dirname(image_path) )
+            print(f"RENDERING new image for {image_path}")
+            rendering_input_path  = calc["initial_chain_file"]
+            rendering_output_path = calc.to_relpath(image_path)
+            print(os.path.splitext(rendering_output_path)[0])
+
+            # Have to remove the .png ending here since pyvista is stupid like that
+            temp_path, ext = os.path.splitext(rendering_output_path)
+            plot_spin_configuration.main(path, rendering_input_path, temp_path, annotate=0)
+            print("... done")
         else:
-            path_image = path_image[0]
+            print("Rendering exists")
 
-        # img = plt.imread(path_image)
-        data_list.append([gamma, l0, path_image])
+        data_list.append( [calc["gamma"], calc["l0"], image_path] )
 
+    # Turn data list into array
     data_list = np.array(data_list)
 
-    gamma_list = np.sort( np.unique(data_list[:,0]) )
-    l0_list = np.sort( np.unique(data_list[:,1]) )
+    # Lists of uniqe gamma and l0 in increasing order, have to convert them to float since they are actually strings here
+    gamma_list = np.sort( np.unique( [float(f) for f in data_list[:,0]]) )
+    l0_list    = np.sort( np.unique( [float(f) for f in data_list[:,1]]) )
 
-    shape_grid = (len(gamma_list), len(l0_list))
+    shape_grid = (len(l0_list), len(gamma_list))
 
-    fig = plt.figure(figsize=(16., 16.))
-    grid = ImageGrid(fig, 111,  # similar to subplot(111)
-                    nrows_ncols=shape_grid,  # creates 2x2 grid of axes
-                    axes_pad=0.1,  # pad between axes in inch.
-                    share_all=True
-                    )
+    pplot = Paper_Plot(Paper_Plot.cm * 17)
+    pplot.nrows = shape_grid[0]
+    pplot.ncols = shape_grid[1]
+    pplot.vertical_margins   = [0.1, 0.05]
+    pplot.horizontal_margins = [0.1, 0.05]
 
-    for a in grid:
-        a.axis("off")
+    pplot.height_from_aspect_ratio(pplot.ncols / pplot.nrows )
+
+    fig = pplot.fig()
+    gs  = pplot.gs()
+
+    print(f"gamma_list = {gamma_list}, {len(gamma_list)}")
+    print(f"l0_list    = {l0_list},    {len(l0_list)}")
+
+    # We draw a coordinate frame around the image grid
+    ax_frame = fig.add_subplot(gs[:,:])
+
+    _max = np.max(l0_list)
+    _min = np.min(l0_list)
+    _range = _max - _min
+    ax_frame.set_ylim( _min - 0.5*_range/(pplot.nrows), _max + 0.5*_range/(pplot.nrows) )
+    ax_frame.set_ylabel( r"$r_0~[a]$" )
+
+    _max = np.max(gamma_list)
+    _min = np.min(gamma_list)
+    _range = _max - _min
+    ax_frame.set_xlim( _min - 0.5*_range/(pplot.ncols), _max + 0.5*_range/(pplot.ncols) )
+
+    # nice labels for gamma
+    xtick_labels = [ f"{i}/7" for i in range(8)]
+    xtick_labels[0]  = "0"
+    xtick_labels[-1] = "1"
+
+    ax_frame.tick_params(right=True, top=True, labelright=True, labeltop=True, labelrotation=0)
+    ax_frame.set_xticks( [ i/7.0 for i in range(8)] )
+    ax_frame.set_xticklabels( xtick_labels )
+    ax_frame.set_xlabel(r"$\gamma$")
+
 
     for d in data_list:
-        row      = len(l0_list)-1 - np.where(l0_list == d[1] )[0][0]
-        col      = np.where(gamma_list == d[0] )[0][0]
-        idx_grid = row * len(gamma_list) + col
-        image    = plt.imread(d[2])
-        ax       = grid[idx_grid]
-        ax.imshow(image)
-        plt.gca().axis('off')
+        gamma = float(d[0])
+        l0    = float(d[1])
 
-    plt.savefig("sp_grid.png", dpi=300)
-    plt.show()
+        col = np.argwhere( gamma_list == gamma )[0,0]
+        row = pplot.nrows-1 - np.argwhere( l0_list == l0 )[0,0]
+
+        ax = fig.add_subplot(gs[row, col])
+
+        image = plt.imread(d[2])
+
+        image_height = image.shape[0] # remember: height comes first
+        image_cropped = pplot.crop(image, width=image_height) # Crop image to be square, by adjusting the width
+        pplot.image_to_ax(ax, image_cropped)
+
+    fig.savefig(grid_image_output, dpi=300)
+    # plt.show()
 
 import calculation_folder
 import glob
 import argparse, os
+import matplotlib.pyplot as plt
 
 parser = argparse.ArgumentParser()
 parser.add_argument("paths", type=str, nargs="+")
 args = parser.parse_args()
 
-main(args.paths)
+main(args.paths, "new_j_renderings")
