@@ -3,34 +3,45 @@ from spirit_extras.calculation_folder import Calculation_Folder
 import numpy as np
 import shutil
 
-def main(paths, renderings_base_path, image_name="rendering.png", grid_image_output="grid.png"):
+def main(paths, renderings_base_path, relative_input_path, idx_image, image_name="rendering.png", grid_image_output="grid.png"):
 
     data_list = []
 
     # First step is to go over all possible data paths, collect and render the images if necessary
     for path in paths:
-        base_path = os.path.basename(path)
+        base_path  = os.path.basename(path)
         image_path = os.path.join( renderings_base_path, base_path, image_name )
 
         calc = Calculation_Folder(path, descriptor_file="params.json")
+        chain_path = calc.format(relative_input_path)
+        if type(idx_image) is int:
+            idx_image_cur = idx_image
+        elif type(idx_image) is str:
+            idx_image_cur = int( calc.format(idx_image) )
 
         print(f"===")
-        print(f"path       = {path}")
-        print(f"base_path  = {base_path}")
-        print(f"image_path = {image_path}")
+        print(f"path                = {path}")
+        print(f"base_path           = {base_path}")
+        print(f"image_path          = {image_path}")
+        print(f"relative_input_path = {relative_input_path}")
+        print(f"chain_path          = {chain_path}")
+        print(f"idx_image           = {idx_image}")
+        print(f"idx_image_cur       = {idx_image_cur}")
 
         if not os.path.exists(image_path):
             import plot_spin_configuration
             if not os.path.exists( os.path.dirname(image_path) ):
                 os.makedirs( os.path.dirname(image_path) )
             print(f"RENDERING new image for {image_path}")
-            rendering_input_path  = calc["initial_chain_file"]
+
+            rendering_input_path  = chain_path
             rendering_output_path = calc.to_relpath(image_path)
             print(os.path.splitext(rendering_output_path)[0])
 
             # Have to remove the .png ending here since pyvista is stupid like that
             temp_path, ext = os.path.splitext(rendering_output_path)
-            plot_spin_configuration.main(path, rendering_input_path, temp_path, annotate=0)
+
+            plot_spin_configuration.main(path, rendering_input_path, temp_path, idx_image_infile=idx_image_cur, annotate=0)
             print("... done")
         else:
             print("Rendering exists")
@@ -84,8 +95,10 @@ def main(paths, renderings_base_path, image_name="rendering.png", grid_image_out
     ax_frame.set_xticklabels( xtick_labels )
     ax_frame.set_xlabel(r"$\gamma$")
 
-
     for d in data_list:
+        if not os.path.exists(d[2]):
+            continue
+
         gamma = float(d[0])
         l0    = float(d[1])
 
@@ -109,7 +122,14 @@ import argparse, os
 import matplotlib.pyplot as plt
 
 parser = argparse.ArgumentParser()
-parser.add_argument("paths", type=str, nargs="+")
+parser.add_argument("paths",      type=str, nargs="+")
+parser.add_argument("-o",         help = "base folder to output renderings to", required=True, type=str)
+parser.add_argument("-i",         help = "relative path to input ovf file", required=True, type=str)
+parser.add_argument("--idx_image", help = "idx of image in input ovf file", required=True, type=str)
+parser.add_argument("-n",         help = "name of the rendered image file", required=True, type=str)
+parser.add_argument("--output",    help = "name of the rendered image file", required=True, type=str)
+
+
 args = parser.parse_args()
 
-main(args.paths, "new_j_renderings")
+main(args.paths, renderings_base_path=args.o, relative_input_path=args.i, idx_image=args.idx_image, image_name=args.n, grid_image_output=args.output)
